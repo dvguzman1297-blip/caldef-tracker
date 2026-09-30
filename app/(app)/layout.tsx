@@ -9,7 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
       <Nav isAdmin={!!data} />
-      <main className="mx-auto max-w-5xl space-y-6 p-4 pb-16">{children}</main>
+      <main className="mx-auto max-w-5xl space-y-6 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-16">{children}</main>
     </>
   );
 }
