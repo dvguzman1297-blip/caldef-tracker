@@ -5,6 +5,7 @@ import { getDay, targetsOf } from "@/lib/day";
 import { todayStr } from "@/lib/date";
 import { addManualMeal, deleteMeal } from "@/app/actions/meals";
 import { MacroRing } from "@/components/macro-ring";
+import { AddMealForm } from "@/components/add-meal-form";
 
 const SLOTS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
@@ -60,19 +61,7 @@ export default async function Dashboard() {
         })}
       </section>
 
-      <details className="glass p-4">
-        <summary className="cursor-pointer font-semibold">Add a meal manually</summary>
-        <form action={addManualMeal} className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <select name="slot" className="input" aria-label="Meal slot">
-            {SLOTS.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <input name="title" required placeholder="Meal name" className="input md:col-span-3" />
-          {[["calories", "kcal"], ["protein", "Protein g"], ["fiber", "Fiber g"], ["netCarbs", "Net carbs g"], ["fat", "Fat g"]].map(([n, l]) => (
-            <input key={n} name={n} type="number" step="0.1" min="0" required placeholder={l} aria-label={l} className="input" />
-          ))}
-          <button className="btn"><Plus className="size-4" />Add meal</button>
-        </form>
-      </details>
+      <AddMealForm />
     </>
   );
 }

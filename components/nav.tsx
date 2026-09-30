@@ -4,12 +4,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, ChefHat, CalendarDays, Columns3, UserRound, Shield, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ThemeToggle } from "./theme-toggle";
+import Image from "next/image";
 
 const links = [
   { href: "/", label: "Dashboard", Icon: LayoutDashboard },
   { href: "/recipes", label: "Recipes", Icon: ChefHat },
   { href: "/history", label: "History", Icon: CalendarDays },
-  { href: "/lanes", label: "Lanes", Icon: Columns3 },
+  { href: "/lanes", label: "Meal Planning", Icon: Columns3 },
   { href: "/profile", label: "Profile", Icon: UserRound },
 ];
 
@@ -19,7 +20,11 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
   const all = isAdmin ? [...links, { href: "/admin", label: "Admin", Icon: Shield }] : links;
   return (
     <header className="glass sticky top-3 z-10 mx-auto mt-3 flex max-w-5xl items-center gap-2 px-3 py-2">
-      <span className="mr-2 font-bold">CalDef</span>
+      <Link href="/" className="mr-2 flex shrink-0 items-center gap-2 font-bold" aria-label="CalDef home">
+        <Image src="/caldef-wordmark-dark.svg" alt="" width={28} height={28}
+        className="size-7" unoptimized />
+          <span>CalDef</span>
+      </Link>      
       <nav className="flex flex-1 gap-1 overflow-x-auto">
         {all.map(({ href, label, Icon }) => {
           const active = href === "/" ? path === "/" : path.startsWith(href);

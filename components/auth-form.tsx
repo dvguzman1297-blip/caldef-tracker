@@ -6,6 +6,7 @@ import { z } from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
 
 type Mode = "login" | "register" | "forgot" | "reset";
 const email = z.string().email("Enter a valid email");
@@ -70,6 +71,15 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="glass w-full max-w-sm space-y-4 p-6 shadow-xl">
+     <Image
+  src="/caldef-wordmark-dark.svg"
+  alt="CalDef"
+  width={600}
+  height={160}
+  className="mx-auto h-32 w-auto"
+  priority
+  unoptimized
+/>
       <h1 className="text-xl font-bold">{copy[mode].title}</h1>
       {mode === "register" && field("fullName", "Full name", "text", "name")}
       {mode !== "reset" && field("email", "Email", "email", "email")}
