@@ -9,7 +9,7 @@ const FIELDS = [
   ["netCarbs", "Net carbs g"], ["fat", "Fat g"],
 ] as const;
 
-export function AddMealForm() {
+export function AddMealForm({ bare = false, onDone }: { bare?: boolean; onDone?: () => void }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [desc, setDesc] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,8 +22,8 @@ export function AddMealForm() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: desc }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error(json?.error || `Estimate failed (status ${res.status}). Check the server terminal.`);
       const f = formRef.current!, m = json.meal;
       const set = (name: string, v: string | number) =>
         ((f.elements.namedItem(name) as HTMLInputElement).value = String(v));
@@ -35,10 +35,8 @@ export function AddMealForm() {
     } finally { setBusy(false); }
   }
 
-  return (
-    <details className="glass p-4">
-      <summary className="cursor-pointer font-semibold">Add a meal manually</summary>
-
+  const body = (
+    <>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input value={desc} onChange={(e) => setDesc(e.target.value)} className="input"
           aria-label="Describe your meal"
@@ -50,7 +48,11 @@ export function AddMealForm() {
       {msg && <p className={msg.ok ? "mt-2 text-sm text-emerald-600" : "err"} role="status">{msg.text}</p>}
 
       <form ref={formRef} className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4"
-        action={async (fd) => { await addManualMeal(fd); formRef.current?.reset(); setDesc(""); setMsg(null); }}>
+        action={async (fd) => {
+          await addManualMeal(fd);
+          formRef.current?.reset(); setDesc(""); setMsg(null);
+          onDone?.();
+        }}>
         <select name="slot" className="input" aria-label="Meal slot">
           {SLOTS.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -60,6 +62,14 @@ export function AddMealForm() {
         ))}
         <button className="btn"><Plus className="size-4" />Add meal</button>
       </form>
+    </>
+  );
+
+  if (bare) return <div>{body}</div>;
+  return (
+    <details className="glass p-4">
+      <summary className="cursor-pointer font-semibold">Add a meal manually</summary>
+      {body}
     </details>
   );
 }
