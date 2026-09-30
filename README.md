@@ -27,6 +27,9 @@ npm i @supabase/supabase-js @supabase/ssr groq-sdk zod react-hook-form @hookform
 npm run dev
 ```
 
+## 6. Deployment
+``` Vercel app deployment 9/30
+
 ## Notes
 - Route protection: `middleware.ts` (login redirect + `/admin` role check), each server action re-checks the user, and RLS is the real enforcement.
 - Targets are recomputed server-side in `app/actions/profile.ts` using `lib/health.ts`. Carbs are tracked as net carbs (net target = carbs target minus fiber target).
