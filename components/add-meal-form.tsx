@@ -3,16 +3,25 @@ import { useRef, useState } from "react";
 import { Plus, Sparkles } from "lucide-react";
 import { addManualMeal } from "@/app/actions/meals";
 
-const SLOTS = ["breakfast", "lunch", "dinner", "snack"] as const;
+const SLOTS = [
+  { value: "breakfast", label: "Breakfast" },
+  { value: "lunch", label: "Lunch" },
+  { value: "dinner", label: "Dinner" },
+  { value: "snack", label: "Snack" },
+] as const;
+
 const FIELDS = [
   ["calories", "kcal"], ["protein", "Protein g"], ["fiber", "Fiber g"],
   ["netCarbs", "Net carbs g"], ["fat", "Fat g"],
 ] as const;
 
-export function AddMealForm({ bare = false, onDone }: { bare?: boolean; onDone?: () => void }) {
+export function AddMealForm({ bare = false, onDone, date }: {
+  bare?: boolean; onDone?: () => void; date?: string;
+}) {
   const formRef = useRef<HTMLFormElement>(null);
   const [desc, setDesc] = useState("");
   const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function estimate() {
@@ -23,7 +32,9 @@ export function AddMealForm({ bare = false, onDone }: { bare?: boolean; onDone?:
         body: JSON.stringify({ description: desc }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json) throw new Error(json?.error || `Estimate failed (status ${res.status}). Check the server terminal.`);
+      if (!res.ok || !json) {
+        throw new Error(json?.error || `Estimate failed (status ${res.status}). Check the server terminal.`);
+      }
       const f = formRef.current!, m = json.meal;
       const set = (name: string, v: string | number) =>
         ((f.elements.namedItem(name) as HTMLInputElement).value = String(v));
@@ -33,6 +44,17 @@ export function AddMealForm({ bare = false, onDone }: { bare?: boolean; onDone?:
     } catch (e: any) {
       setMsg({ ok: false, text: e.message || "Something went wrong. Try again." });
     } finally { setBusy(false); }
+  }
+
+  async function submit(fd: FormData) {
+    setAdding(true); setMsg(null);
+    try {
+      await addManualMeal(fd);
+      formRef.current?.reset(); setDesc("");
+      onDone?.();
+    } catch {
+      setMsg({ ok: false, text: "Could not add the meal. Check the values and try again." });
+    } finally { setAdding(false); }
   }
 
   const body = (
@@ -47,27 +69,26 @@ export function AddMealForm({ bare = false, onDone }: { bare?: boolean; onDone?:
       </div>
       {msg && <p className={msg.ok ? "mt-2 text-sm text-emerald-600" : "err"} role="status">{msg.text}</p>}
 
-      <form ref={formRef} className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4"
-        action={async (fd) => {
-          await addManualMeal(fd);
-          formRef.current?.reset(); setDesc(""); setMsg(null);
-          onDone?.();
-        }}>
+      <form ref={formRef} action={submit} className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+        {date && <input type="hidden" name="date" value={date} />}
         <select name="slot" className="input" aria-label="Meal slot">
-          {SLOTS.map((s) => <option key={s} value={s}>{s}</option>)}
+          {SLOTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
         <input name="title" required placeholder="Meal name" className="input md:col-span-3" />
         {FIELDS.map(([n, l]) => (
-          <input key={n} name={n} type="number" step="0.1" min="0" required placeholder={l} aria-label={l} className="input" />
+          <input key={n} name={n} type="number" step="0.1" min="0" required
+            placeholder={l} aria-label={l} className="input" />
         ))}
-        <button className="btn"><Plus className="size-4" />Add meal</button>
+        <button className="btn" disabled={adding}>
+          <Plus className="size-4" />{adding ? "Adding…" : "Add meal"}
+        </button>
       </form>
     </>
   );
 
   if (bare) return <div>{body}</div>;
   return (
-    <details className="glass p-4">
+    <details id="add-meal" className="glass p-4">
       <summary className="cursor-pointer font-semibold">Add a meal manually</summary>
       {body}
     </details>
