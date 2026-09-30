@@ -1,4 +1,4 @@
-# CalDef Tracker: setup
+# CalDef Tracker
 
 ## 1. Create the Next.js app (skip if you already have one)
 ```bash
