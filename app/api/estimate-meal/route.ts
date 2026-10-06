@@ -2,6 +2,7 @@ import { z } from "zod";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { askJson } from "@/lib/groq-json";
+import { checkMacros } from "@/lib/nutrition";
 
 const Input = z.object({ description: z.string().min(3).max(300) });
 const Out = z.object({
@@ -24,13 +25,10 @@ export async function POST(req: Request) {
 
   try {
     const o = Out.parse(await askJson(system, `Meal: ${parsed.data.description}`));
-    const r1 = (n: number) => Math.max(0, Math.round(n * 10) / 10);
-    const est = o.protein * 4 + (o.netCarbs + o.fiber * 0.5) * 4 + o.fat * 9;
-    // Fix calories when the model's number is far off its own macros
-    const kcal = o.calories <= 0 || Math.abs(est - o.calories) / o.calories > 0.25 ? est : o.calories;
+    const { macros, adjusted } = checkMacros(o); // throws on non-finite, negative or implausible values
     return NextResponse.json({
-      meal: { title: o.title.slice(0, 120), calories: Math.round(kcal),
-        protein: r1(o.protein), fiber: r1(o.fiber), netCarbs: r1(o.netCarbs), fat: r1(o.fat) },
+      meal: { title: o.title.trim().slice(0, 120) || "Meal", ...macros },
+      source: "ai_estimate", adjusted,
     });
   } catch (e) {
     console.error("meal estimate failed", e);

@@ -6,12 +6,14 @@ import { z } from "zod";
 import { motion } from "framer-motion";
 import { Clock, Sparkles, Check } from "lucide-react";
 import { logMeal } from "@/app/actions/meals";
+import { addPlanEntry } from "@/app/actions/plan";
 
 type Remaining = { calories: number; protein: number; fiber: number; netCarbs: number; fat: number };
 type Recipe = {
   title: string; prepTimeMinutes: number; ingredients: string[]; steps: string[];
   ingredientMatchPct: number; macros: Remaining;
 };
+
 const Schema = z.object({
   pantry: z.string().min(3, "List at least one ingredient").max(500),
   slot: z.enum(["breakfast", "lunch", "dinner", "snack"]),
@@ -22,12 +24,16 @@ export function PantryClient({ remaining }: { remaining: Remaining }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [logged, setLogged] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [reviewed, setReviewed] = useState(false);
+  const [planDate, setPlanDate] = useState("");
+  const [planned, setPlanned] = useState("");
   const [pending, start] = useTransition();
   const { register, handleSubmit, watch, formState: { errors } } =
     useForm<z.infer<typeof Schema>>({ resolver: zodResolver(Schema), defaultValues: { slot: "lunch" } });
 
   async function generate(v: z.infer<typeof Schema>) {
-    setLoading(true); setError(""); setRecipe(null); setLogged(false);
+    setLoading(true); setError(""); setRecipe(null); setLogged(false); setWarnings([]); setReviewed(false); setPlanned("");
     try {
       const res = await fetch("/api/recipe", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -38,7 +44,7 @@ export function PantryClient({ remaining }: { remaining: Remaining }) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      setRecipe(json.recipe);
+      setRecipe(json.recipe); setWarnings(json.warnings ?? []);
     } catch (e: any) { setError(e.message || "Something went wrong. Try again."); }
     finally { setLoading(false); }
   }
@@ -91,13 +97,35 @@ export function PantryClient({ remaining }: { remaining: Remaining }) {
             <div><h3 className="mb-1 font-semibold">Ingredients</h3><ul className="list-disc space-y-1 pl-5 text-sm">{recipe.ingredients.map((i, k) => <li key={k}>{i}</li>)}</ul></div>
             <div><h3 className="mb-1 font-semibold">Steps</h3><ol className="list-decimal space-y-1 pl-5 text-sm">{recipe.steps.map((s, k) => <li key={k}>{s}</li>)}</ol></div>
           </div>
-          <button className="btn" disabled={pending || logged} onClick={() => start(async () => {
+          {warnings.length > 0 && (
+            <ul role="alert" className="list-disc space-y-1 rounded-xl bg-amber-500/15 p-3 pl-7 text-sm">
+              {warnings.map((w) => <li key={w}>{w}</li>)}
+            </ul>
+          )}
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-1" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} />
+            <span><b>AI-generated.</b> Nutrition values are estimates and can be inaccurate. Check ingredients against your allergies and restrictions. I&apos;ve reviewed this recipe.</span>
+          </label>
+          <button className="btn" disabled={pending || logged || !reviewed} onClick={() => start(async () => {
             await logMeal({ slot: watch("slot"), title: recipe.title, calories: recipe.macros.calories,
               protein: recipe.macros.protein, fiber: recipe.macros.fiber, netCarbs: recipe.macros.netCarbs, fat: recipe.macros.fat });
             setLogged(true);
           })}>
             {logged ? <><Check className="size-4" />Logged to {watch("slot")}</> : pending ? "Logging…" : `Log to ${watch("slot")}`}
           </button>
+          <div className="flex flex-wrap items-end gap-2 border-t border-black/10 pt-3 dark:border-white/10">
+            <div><label className="label" htmlFor="planDate">Or plan it for</label>
+              <input id="planDate" type="date" className="input" value={planDate} onChange={(e) => setPlanDate(e.target.value)} /></div>
+            <button className="btn btn-ghost" disabled={pending || !planDate || !reviewed} onClick={() => start(async () => {
+              try {
+                await addPlanEntry({ date: planDate, slot: watch("slot"), title: recipe.title, calories: recipe.macros.calories,
+                  protein: recipe.macros.protein, fiber: recipe.macros.fiber, netCarbs: recipe.macros.netCarbs, fat: recipe.macros.fat,
+                  ingredients: recipe.ingredients, source: "ai_recipe" });
+                setPlanned(`Added to your ${watch("slot")} plan for ${planDate}.`);
+              } catch (e: any) { setPlanned(e.message || "Could not add to plan."); }
+            })}>Add to meal plan</button>
+            {planned && <p className="text-sm" role="status">{planned}</p>}
+          </div>
         </motion.article>
       )}
     </div>

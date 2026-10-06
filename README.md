@@ -16,7 +16,7 @@ npm i @supabase/supabase-js @supabase/ssr groq-sdk zod react-hook-form @hookform
 ```
 
 ## 4. Supabase
-1. Run `supabase/migrations/0001_init.sql` in the Supabase SQL editor.
+1. Run every file in `supabase/migrations/` in order (`0001`–`0004`) in the Supabase SQL editor.
 2. Auth > URL Configuration: set Site URL to `http://localhost:3000` and add `http://localhost:3000/auth/callback` to Redirect URLs.
 3. Copy `.env.example` to `.env.local` and fill in the project URL, anon key, and your Groq key.
 4. After registering, make yourself admin in the SQL editor:
@@ -33,5 +33,6 @@ npm run dev
 ## Notes
 - Route protection: `middleware.ts` (login redirect + `/admin` role check), each server action re-checks the user, and RLS is the real enforcement.
 - Targets are recomputed server-side in `app/actions/profile.ts` using `lib/health.ts`. Carbs are tracked as net carbs (net target = carbs target minus fiber target).
+- Account deletion needs `SUPABASE_SERVICE_ROLE_KEY` in the server environment (never expose it to the browser).
 - Set `APP_TIMEZONE` in `.env.local` to your IANA timezone so "today" rolls over at local midnight.
 - UI uses plain Tailwind classes (defined in `app/globals.css`), so no `shadcn init` is needed.

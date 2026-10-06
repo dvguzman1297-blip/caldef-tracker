@@ -3,32 +3,12 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { todayStr } from "@/lib/date";
-
-const Meal = z.object({
-  slot: z.enum(["breakfast", "lunch", "dinner", "snack"]),
-  title: z.string().min(1).max(120),
-  calories: z.number().min(0).max(3000), protein: z.number().min(0).max(300),
-  fiber: z.number().min(0).max(150), netCarbs: z.number().min(0).max(500),
-  fat: z.number().min(0).max(300), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  source: z.string().optional(),
-});
+import { Meal, insertMealRow } from "@/lib/meal-store";
 
 async function insertMeal(raw: unknown) {
-  const m = Meal.parse(raw);
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
-  const { data: log, error: e1 } = await supabase.from("daily_logs")
-    .upsert({ user_id: user.id, log_date: m.date ?? todayStr() }, { onConflict: "user_id,log_date" })
-    .select("id").single();
-  if (e1) throw e1;
-  const { error } = await supabase.from("logged_meals").insert({
-    daily_log_id: log.id, user_id: user.id, slot: m.slot, title: m.title,
-    calories: Math.round(m.calories), protein_g: m.protein, fiber_g: m.fiber,
-    net_carbs_g: m.netCarbs, fat_g: m.fat, source: m.source ?? "manual",
-  });
-  if (error) throw error;
-  revalidatePath("/"); revalidatePath("/history");
+  const { supabase, user } = await requireUser();
+  await insertMealRow(supabase, user.id, raw);
+  refresh();
 }
 
 export async function logMeal(input: z.input<typeof Meal>) {
@@ -41,11 +21,58 @@ export async function addManualMeal(fd: FormData) {
     slot: fd.get("slot"), title: String(fd.get("title") ?? ""),
     calories: n("calories"), protein: n("protein"), fiber: n("fiber"),
     netCarbs: n("netCarbs"), fat: n("fat"),
+    date: (fd.get("date") as string) || undefined,
+    source: fd.get("source") === "ai_estimate" ? "ai_estimate" : "manual",
+    consumedTime: (fd.get("consumedTime") as string) || null,
   });
 }
 
-export async function deleteMeal(id: string) {
+async function requireUser() {
   const supabase = await createClient();
-  await supabase.from("logged_meals").delete().eq("id", id);
-  revalidatePath("/"); revalidatePath("/history");
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+  return { supabase, user };
+}
+
+const refresh = () => { revalidatePath("/"); revalidatePath("/history"); };
+
+export async function updateMeal(id: string, raw: unknown) {
+  const m = Meal.omit({ date: true, source: true }).parse(raw);
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase.from("logged_meals").update({
+    slot: m.slot, title: m.title, calories: Math.round(m.calories), protein_g: m.protein,
+    fiber_g: m.fiber, net_carbs_g: m.netCarbs, fat_g: m.fat, consumed_time: m.consumedTime || null,
+  }).eq("id", id).eq("user_id", user.id).is("deleted_at", null);
+  if (error) throw new Error(`Could not update meal: ${error.message}`);
+  refresh();
+}
+
+/** Copies a meal into the given day (default today), e.g. to repeat yesterday's breakfast. */
+export async function duplicateMeal(id: string, date?: string) {
+  const { supabase, user } = await requireUser();
+  const { data: src, error } = await supabase.from("logged_meals").select("*")
+    .eq("id", id).eq("user_id", user.id).is("deleted_at", null).single();
+  if (error) throw new Error(`Could not find meal: ${error.message}`);
+  await insertMeal({
+    slot: src.slot, title: src.title, calories: src.calories, protein: Number(src.protein_g),
+    fiber: Number(src.fiber_g), netCarbs: Number(src.net_carbs_g), fat: Number(src.fat_g),
+    source: src.source ?? "manual", date: date ?? todayStr(), consumedTime: null,
+  });
+}
+
+/** Soft delete so the UI can offer undo. */
+export async function deleteMeal(id: string) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase.from("logged_meals")
+    .update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user.id);
+  if (error) throw new Error(`Could not delete meal: ${error.message}`);
+  refresh();
+}
+
+export async function restoreMeal(id: string) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase.from("logged_meals")
+    .update({ deleted_at: null }).eq("id", id).eq("user_id", user.id);
+  if (error) throw new Error(`Could not restore meal: ${error.message}`);
+  refresh();
 }

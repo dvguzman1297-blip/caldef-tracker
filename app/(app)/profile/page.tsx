@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { PrivacyPanel } from "@/components/privacy-panel";
 import { ProfileForm } from "@/components/profile-form";
 
 export default async function ProfilePage() {
@@ -17,7 +18,9 @@ export default async function ProfilePage() {
         age: p?.age ?? undefined, sex: p?.sex ?? undefined, activity: p?.activity_level ?? undefined,
         deficitPct: m ? Number(m.deficit_pct) : undefined,
         dietaryPreferences: (p?.dietary_preferences ?? []).join(", "),
+        allergens: p?.allergens ?? [],
       }} />
+      <PrivacyPanel />
     </>
   );
 }

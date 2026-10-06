@@ -1,7 +1,11 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, Sparkles } from "lucide-react";
 import { addManualMeal } from "@/app/actions/meals";
+import { saveFood } from "@/app/actions/foods";
+import { createClient } from "@/lib/supabase/client";
+
+type Food = { id: string; name: string; serving: string; calories: number; protein_g: number; fiber_g: number; net_carbs_g: number; fat_g: number };
 
 const SLOTS = [
   { value: "breakfast", label: "Breakfast" },
@@ -22,6 +26,41 @@ export function AddMealForm({ bare = false, onDone, date }: {
   const [desc, setDesc] = useState("");
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [aiFilled, setAiFilled] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
+  const [foods, setFoods] = useState<Food[]>([]);
+  const [foodId, setFoodId] = useState("");
+  const [servings, setServings] = useState(1);
+
+  const loadFoods = async () => {
+    const { data } = await createClient().from("saved_foods")
+      .select("id,name,serving,calories,protein_g,fiber_g,net_carbs_g,fat_g").order("name");
+    setFoods((data as Food[]) ?? []);
+  };
+  useEffect(() => { loadFoods(); }, []); // eslint-disable-line
+
+  const setField = (name: string, v: string | number) => {
+    const el = formRef.current?.elements.namedItem(name) as HTMLInputElement | null;
+    if (el) el.value = String(v);
+  };
+  function applyFood(id: string, k: number) {
+    const f = foods.find((x) => x.id === id);
+    if (!f || !(k > 0)) return;
+    const r = (n: number) => Math.round(Number(n) * k * 10) / 10;
+    setField("title", k === 1 ? f.name : `${f.name} ×${k}`);
+    setField("calories", Math.round(f.calories * k)); setField("protein", r(f.protein_g));
+    setField("fiber", r(f.fiber_g)); setField("netCarbs", r(f.net_carbs_g)); setField("fat", r(f.fat_g));
+    setAiFilled(false); setReviewed(false);
+  }
+  async function saveCurrent() {
+    const fd = new FormData(formRef.current!);
+    const n = (k: string) => Number(fd.get(k) || 0);
+    try {
+      await saveFood({ name: String(fd.get("title") ?? ""), serving: "1 serving", calories: n("calories"),
+        protein: n("protein"), fiber: n("fiber"), netCarbs: n("netCarbs"), fat: n("fat") });
+      await loadFoods(); setMsg({ ok: true, text: "Saved to your foods." });
+    } catch (e: any) { setMsg({ ok: false, text: e.message || "Could not save food." }); }
+  }
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function estimate() {
@@ -40,7 +79,10 @@ export function AddMealForm({ bare = false, onDone, date }: {
         ((f.elements.namedItem(name) as HTMLInputElement).value = String(v));
       set("title", m.title); set("calories", m.calories); set("protein", m.protein);
       set("fiber", m.fiber); set("netCarbs", m.netCarbs); set("fat", m.fat);
-      setMsg({ ok: true, text: "AI estimate filled in. Review the numbers, then add the meal." });
+      setAiFilled(true); setReviewed(false);
+      setMsg({ ok: true, text: json.adjusted
+        ? "AI estimate filled in (calories were recalculated from its macros). Check the numbers before adding."
+        : "AI estimate filled in. Check the numbers before adding." });
     } catch (e: any) {
       setMsg({ ok: false, text: e.message || "Something went wrong. Try again." });
     } finally { setBusy(false); }
@@ -50,7 +92,7 @@ export function AddMealForm({ bare = false, onDone, date }: {
     setAdding(true); setMsg(null);
     try {
       await addManualMeal(fd);
-      formRef.current?.reset(); setDesc("");
+      formRef.current?.reset(); setDesc(""); setAiFilled(false); setReviewed(false);
       onDone?.();
     } catch {
       setMsg({ ok: false, text: "Could not add the meal. Check the values and try again." });
@@ -69,8 +111,23 @@ export function AddMealForm({ bare = false, onDone, date }: {
       </div>
       {msg && <p className={msg.ok ? "mt-2 text-sm text-emerald-600" : "err"} role="status">{msg.text}</p>}
 
+      {foods.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <select className="input !w-auto min-w-48" aria-label="Saved foods" value={foodId}
+            onChange={(e) => { setFoodId(e.target.value); applyFood(e.target.value, servings); }}>
+            <option value="">Use a saved food…</option>
+            {foods.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.serving}, {f.calories} kcal)</option>)}
+          </select>
+          <label className="text-sm">Servings{" "}
+            <input type="number" min="0.25" max="20" step="0.25" value={servings} className="input !w-20"
+              onChange={(e) => { const k = Number(e.target.value); setServings(k); if (foodId) applyFood(foodId, k); }} />
+          </label>
+        </div>
+      )}
+
       <form ref={formRef} action={submit} className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
         {date && <input type="hidden" name="date" value={date} />}
+        <input type="hidden" name="source" value={aiFilled ? "ai_estimate" : "manual"} />
         <select name="slot" className="input" aria-label="Meal slot">
           {SLOTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
@@ -79,9 +136,20 @@ export function AddMealForm({ bare = false, onDone, date }: {
           <input key={n} name={n} type="number" step="0.1" min="0" required
             placeholder={l} aria-label={l} className="input" />
         ))}
-        <button className="btn" disabled={adding}>
+        <input name="consumedTime" type="time" aria-label="Time eaten (optional)" className="input" />
+        {aiFilled && (
+          <label className="col-span-2 flex items-start gap-2 text-sm md:col-span-4">
+            <input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} className="mt-1" />
+            <span>
+              <b>AI estimate.</b> It can be off by 20–30% or more, especially for portions. I checked the numbers
+              and edited anything that looks wrong.
+            </span>
+          </label>
+        )}
+        <button className="btn" disabled={adding || (aiFilled && !reviewed)}>
           <Plus className="size-4" />{adding ? "Adding…" : "Add meal"}
         </button>
+        <button type="button" className="btn btn-ghost" onClick={saveCurrent}>Save as food</button>
       </form>
     </>
   );
