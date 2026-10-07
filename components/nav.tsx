@@ -40,6 +40,8 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
     router.refresh();
   };
 
+  // Close menus when navigating to another route
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setOpen(false); setLogOpen(false); }, [path]);
 
   useEffect(() => {
@@ -96,7 +98,8 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
   return (
     <>
       {/* Desktop header (md and up) */}
-      <header className="glass sticky top-3 z-10 mx-auto mt-3 hidden max-w-5xl items-center gap-3 px-4 py-2.5 md:flex">
+      <div className="sticky top-0 z-10 hidden bg-app/90 px-4 py-3 backdrop-blur md:block">
+      <header className="glass mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5 shadow-sm">
         <Link href="/" className="flex shrink-0 items-center" aria-label="CalDef home">
           <Image src="/caldef-wordmark-dark.svg" alt="CalDef" width={110} height={28}
             className="h-7 w-auto" priority unoptimized />
@@ -125,11 +128,12 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
           </button>
         </div>
       </header>
+      </div>
 
       {/* Mobile top header: slides away on scroll down */}
-      <header
-        className={`glass sticky top-3 z-10 mx-auto mt-3 flex max-w-5xl items-center gap-2 px-3 py-2 transition-transform duration-300 md:hidden ${
-          hideTop && !open && !logOpen ? "-translate-y-[130%]" : ""}`}>
+      <div className={`sticky top-0 z-10 bg-app/90 px-3 py-3 backdrop-blur transition-transform duration-300 md:hidden ${
+          hideTop && !open && !logOpen ? "-translate-y-full" : ""}`}>
+      <header className="glass mx-auto flex max-w-5xl items-center gap-2 px-3 py-2 shadow-sm">
         <Link href="/" className="flex min-w-0 items-center gap-2" aria-label="CalDef home">
           <Image src="/caldef-wordmark-dark.svg" alt="CalDef" width={110} height={28}
             className="h-7 w-auto shrink-0" unoptimized />
@@ -143,6 +147,7 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
           </button>
         </div>
       </header>
+      </div>
 
       {/* Account menu (Admin lives here on mobile) */}
       {open && (

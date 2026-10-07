@@ -1,6 +1,7 @@
+import { getToday } from "@/lib/today";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { todayStr, isValidDate } from "@/lib/date";
+import { isValidDate } from "@/lib/date";
 
 export const Meal = z.object({
   slot: z.enum(["breakfast", "lunch", "dinner", "snack"]),
@@ -15,10 +16,10 @@ export const Meal = z.object({
 /** Inserts one logged meal (creating the day's log if needed) and returns its id. */
 export async function insertMealRow(supabase: SupabaseClient, userId: string, raw: unknown) {
   const m = Meal.parse(raw);
-  if (m.date && m.date > todayStr()) throw new Error("Can't log meals in the future");
+  if (m.date && m.date > await getToday()) throw new Error("Can't log meals in the future");
   const user = { id: userId };
   const { data: log, error: e1 } = await supabase.from("daily_logs")
-    .upsert({ user_id: user.id, log_date: m.date ?? todayStr() }, { onConflict: "user_id,log_date" })
+    .upsert({ user_id: user.id, log_date: m.date ?? await getToday() }, { onConflict: "user_id,log_date" })
     .select("id").single();
   if (e1) throw e1;
   const { data: row, error } = await supabase.from("logged_meals").insert({

@@ -1,4 +1,5 @@
 import { Nav } from "@/components/nav";
+import { TimezoneSync } from "@/components/timezone-sync";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -8,8 +9,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .eq("user_id", user?.id ?? "").eq("role", "admin").maybeSingle();
   return (
     <>
+      <TimezoneSync />
       <Nav isAdmin={!!data} />
-<main className="mx-auto max-w-5xl space-y-6 p-4 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-16">{children}</main>
+      <main className="mx-auto max-w-5xl p-4 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-16">{children}</main>
     </>
   );
 }

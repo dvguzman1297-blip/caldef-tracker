@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { PageShell } from "@/components/page-shell";
 import { PrivacyPanel } from "@/components/privacy-panel";
 import { ProfileForm } from "@/components/profile-form";
 
@@ -8,9 +9,7 @@ export default async function ProfilePage() {
   const { data: p } = await s.from("profiles").select("*").eq("id", user!.id).single();
   const { data: m } = await s.from("health_metrics").select("deficit_pct").eq("user_id", user!.id).maybeSingle();
   return (
-    <>
-      <h1 className="text-2xl font-bold">Your profile</h1>
-      <p className="text-sm opacity-70">Your daily targets are calculated from these details.</p>
+    <PageShell title="Your profile" subtitle="Your daily targets are calculated from these details.">
       <ProfileForm defaults={{
         heightCm: p?.height_cm ? Number(p.height_cm) : undefined,
         currentWeightKg: p?.current_weight_kg ? Number(p.current_weight_kg) : undefined,
@@ -21,6 +20,6 @@ export default async function ProfilePage() {
         allergens: p?.allergens ?? [],
       }} />
       <PrivacyPanel />
-    </>
+    </PageShell>
   );
 }

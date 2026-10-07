@@ -1,5 +1,19 @@
-export const todayStr = (d = new Date()) =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: process.env.APP_TIMEZONE || "UTC" }).format(d);
+// Pure date helpers. A "date" is always a YYYY-MM-DD string in the user's local calendar.
+// Server code gets "today" from lib/today.ts (which knows the user's timezone); these never read a clock themselves.
+
+export const DEFAULT_TZ = process.env.APP_TIMEZONE || "UTC";
+
+export const isValidTimeZone = (tz: unknown): tz is string => {
+  if (typeof tz !== "string" || !tz) return false;
+  try { new Intl.DateTimeFormat("en-CA", { timeZone: tz }); return true; } catch { return false; }
+};
+
+/** The calendar day at instant `now` in IANA timezone `tz` (falls back to UTC for an invalid tz). */
+export const todayIn = (tz: string, now = new Date()) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: isValidTimeZone(tz) ? tz : "UTC" }).format(now);
+
+/** @deprecated Uses the server default timezone. Prefer getToday() from lib/today.ts in server code. */
+export const todayStr = (d = new Date()) => todayIn(DEFAULT_TZ, d);
 
 export const addDays = (s: string, n: number) => {
   const d = new Date(`${s}T12:00:00Z`);
@@ -7,15 +21,25 @@ export const addDays = (s: string, n: number) => {
   return d.toISOString().slice(0, 10);
 };
 
-// "Today, Sep 30" / "Yesterday, Sep 29" / "Mon, Sep 28"
+const at = (s: string) => new Date(`${s}T12:00:00Z`);
+const fmt = (s: string, o: Intl.DateTimeFormatOptions) => at(s).toLocaleDateString("en-US", { ...o, timeZone: "UTC" });
+
+/** "Wed, Oct 7"; the year is added when it isn't the current year: "Wed, Oct 7, 2025". */
+export const formatDate = (s: string, today: string) =>
+  fmt(s, { weekday: "short", month: "short", day: "numeric", ...(s.slice(0, 4) !== today.slice(0, 4) && { year: "numeric" }) });
+
+/** "Oct 7" / "Oct 7, 2025", for ranges where the weekday is noise. */
+export const formatDay = (s: string, today: string) =>
+  fmt(s, { month: "short", day: "numeric", ...(s.slice(0, 4) !== today.slice(0, 4) && { year: "numeric" }) });
+
+export const weekdayShort = (s: string) => fmt(s, { weekday: "short" });
+export const dayOfMonth = (s: string) => Number(s.slice(8, 10));
+
+/** "Today, Oct 7" / "Yesterday, Oct 6" / "Mon, Oct 5" (year added when not the current year). */
 export const dateLabel = (s: string, today: string) => {
-  const d = new Date(`${s}T12:00:00Z`);
-  const md = d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-  const prefix =
-    s === today ? "Today"
-    : s === addDays(today, -1) ? "Yesterday"
-    : d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
-  return `${prefix}, ${md}`;
+  if (s === today) return `Today, ${formatDay(s, today)}`;
+  if (s === addDays(today, -1)) return `Yesterday, ${formatDay(s, today)}`;
+  return formatDate(s, today);
 };
 
 /** True only for real calendar dates in YYYY-MM-DD form (rejects 2026-02-31, 2026-13-01). */

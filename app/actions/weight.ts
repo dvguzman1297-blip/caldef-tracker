@@ -1,8 +1,9 @@
 "use server";
+import { getToday } from "@/lib/today";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { todayStr, isValidDate } from "@/lib/date";
+import { isValidDate } from "@/lib/date";
 
 const Weight = z.object({
   date: z.string().refine(isValidDate, "Invalid date"),
@@ -18,7 +19,7 @@ async function user() {
 
 export async function logWeight(raw: z.input<typeof Weight>) {
   const w = Weight.parse(raw);
-  if (w.date > todayStr()) throw new Error("Can't log a weight in the future");
+  if (w.date > await getToday()) throw new Error("Can't log a weight in the future");
   const { supabase, user: u } = await user();
   const { error } = await supabase.from("weight_logs").upsert(
     { user_id: u.id, log_date: w.date, weight_kg: Math.round(w.kg * 10) / 10 },

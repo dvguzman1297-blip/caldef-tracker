@@ -8,6 +8,7 @@ export default async function Admin() {
   const { data: me } = await s.from("user_roles").select("role").eq("user_id", user!.id).eq("role", "admin").maybeSingle();
   if (!me) redirect("/");
 
+  // eslint-disable-next-line react-hooks/purity -- async server component, runs once per request
   const since = new Date(Date.now() - 7 * 864e5).toISOString();
   const [{ count: users }, { count: meals7 }, { data: profiles }, { data: roles }, { data: recent }] = await Promise.all([
     s.from("profiles").select("*", { count: "exact", head: true }),

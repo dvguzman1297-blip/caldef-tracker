@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { todayStr } from "@/lib/date";
+import { getToday } from "@/lib/today";
 import { Meal, insertMealRow } from "@/lib/meal-store";
 
 async function insertMeal(raw: unknown) {
@@ -56,7 +56,7 @@ export async function duplicateMeal(id: string, date?: string) {
   await insertMeal({
     slot: src.slot, title: src.title, calories: src.calories, protein: Number(src.protein_g),
     fiber: Number(src.fiber_g), netCarbs: Number(src.net_carbs_g), fat: Number(src.fat_g),
-    source: src.source ?? "manual", date: date ?? todayStr(), consumedTime: null,
+    source: src.source ?? "manual", date: date ?? await getToday(), consumedTime: null,
   });
 }
 

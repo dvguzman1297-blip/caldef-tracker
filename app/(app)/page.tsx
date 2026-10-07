@@ -1,8 +1,10 @@
+import { getToday } from "@/lib/today";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getDay, targetsOf } from "@/lib/day";
-import { todayStr, dateLabel, parseDateParam } from "@/lib/date";
+import { dateLabel, parseDateParam } from "@/lib/date";
+import { PageShell } from "@/components/page-shell";
 import { MacroSummary } from "@/components/macro-summary";
 import { DayHeader } from "@/components/day-header";
 import { AddItemButton } from "@/components/add-item-button";
@@ -14,7 +16,7 @@ const SLOTS = ["breakfast", "lunch", "dinner", "snack"] as const;
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { date: q } = await searchParams;
-  const today = todayStr();
+  const today = await getToday();
   const date = parseDateParam(q, today);
 
   const s = await createClient();
@@ -29,7 +31,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   if (wErr) throw new Error(`Could not load your weight: ${wErr.message}`);
 
   return (
-    <>
+    <PageShell title="Dashboard" subtitle="Track today's calories and macros against your targets.">
       <DayHeader date={date} today={today} deficitPct={m.deficit_pct} />
 
       <MacroSummary isEmpty={meals.length === 0} calories={{ value: totals.calories, target: t.calories }}
@@ -66,6 +68,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       </section>
 
       <QuickFab date={date} />
-    </>
+    </PageShell>
   );
 }

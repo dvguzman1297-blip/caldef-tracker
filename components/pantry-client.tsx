@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,6 +8,8 @@ import { ChefHat, Clock, Sparkles, Check, History } from "lucide-react";
 import { logMeal } from "@/app/actions/meals";
 import { addPlanEntry } from "@/app/actions/plan";
 import { TagInput } from "@/components/ui/tag-input";
+import { formatDate } from "@/lib/date";
+import { defaultSlot, mealTarget, MEAL_SHARE } from "@/lib/budget";
 
 type Remaining = { calories: number; protein: number; fiber: number; netCarbs: number; fat: number };
 type Recipe = {
@@ -26,7 +28,7 @@ const Schema = z.object({
 });
 type Form = z.infer<typeof Schema>;
 
-export function PantryClient({ remaining }: { remaining: Remaining }) {
+export function PantryClient({ remaining, today }: { remaining: Remaining; today: string }) {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [recent, setRecent] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,9 +39,16 @@ export function PantryClient({ remaining }: { remaining: Remaining }) {
   const [planDate, setPlanDate] = useState("");
   const [planned, setPlanned] = useState("");
   const [pending, start] = useTransition();
-  const { register, control, handleSubmit, watch, formState: { errors } } =
+  const [override, setOverride] = useState<{ calories: number; protein: number } | null>(null);
+  const [editingTarget, setEditingTarget] = useState(false);
+  const { register, control, handleSubmit, watch, setValue, formState: { errors } } =
     useForm<Form>({ resolver: zodResolver(Schema), defaultValues: { slot: "lunch", pantry: [] } });
   const slot = watch("slot");
+  const suggested = mealTarget(remaining, slot);
+  const target = override ?? suggested;
+
+  // Local time of day picks the starting meal (the server cannot know it)
+  useEffect(() => { setValue("slot", defaultSlot(new Date().getHours())); }, [setValue]);
 
   function show(r: Recipe, w: string[] = []) {
     setRecipe(r); setWarnings(w); setLogged(false); setReviewed(false); setPlanned(""); setError("");
@@ -50,7 +59,7 @@ export function PantryClient({ remaining }: { remaining: Remaining }) {
     try {
       const res = await fetch("/api/recipe", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pantry: v.pantry.join(", "), remaining: {
+        body: JSON.stringify({ pantry: v.pantry.join(", "), target: { calories: target.calories, protein: target.protein }, remaining: {
           calories: Math.max(remaining.calories, 0), protein: Math.max(remaining.protein, 0),
           fiber: Math.max(remaining.fiber, 0), netCarbs: Math.max(remaining.netCarbs, 0), fat: Math.max(remaining.fat, 0),
         } }),
@@ -79,10 +88,36 @@ export function PantryClient({ remaining }: { remaining: Remaining }) {
         )} />
         <div>
           <label className="label" htmlFor="slot">Meal</label>
-          <select id="slot" className="input" {...register("slot")}>
+          <select id="slot" className="input" {...register("slot", { onChange: () => { setOverride(null); setEditingTarget(false); } })}>
             <option value="breakfast">Breakfast</option><option value="lunch">Lunch</option>
             <option value="dinner">Dinner</option><option value="snack">Snack</option>
           </select>
+        </div>
+        <div className="rounded-xl bg-inset p-3 text-sm" aria-live="polite">
+          <div className="flex items-start justify-between gap-2">
+            <p>
+              Target for this {slot}: <b>~{target.calories.toLocaleString("en-US")} kcal</b>, <b>~{target.protein}g protein</b>
+            </p>
+            <button type="button" className="shrink-0 font-medium text-accent-fg underline"
+              onClick={() => { if (editingTarget) setOverride(null); setEditingTarget((e) => !e); }}>
+              {editingTarget ? "Reset" : "Edit"}
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            {override ? "Custom target."
+              : suggested.overBudget ? "You've used today's calories, so this is a minimum-size meal."
+              : `${Math.round(MEAL_SHARE[slot] * 100)}% of what you have left today.`}
+          </p>
+          {editingTarget && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div><label className="label" htmlFor="tkcal">Calories</label>
+                <input id="tkcal" type="number" inputMode="numeric" min={50} max={2500} step={10} className="input"
+                  value={target.calories} onChange={(e) => setOverride({ calories: Number(e.target.value), protein: target.protein })} /></div>
+              <div><label className="label" htmlFor="tprot">Protein (g)</label>
+                <input id="tprot" type="number" inputMode="numeric" min={0} max={200} className="input"
+                  value={target.protein} onChange={(e) => setOverride({ calories: target.calories, protein: Number(e.target.value) })} /></div>
+            </div>
+          )}
         </div>
         <button className="btn w-full !py-3" disabled={loading}>
           <Sparkles className="size-4" aria-hidden="true" />{loading ? "Cooking up ideas…" : "Generate recipe"}
@@ -156,7 +191,7 @@ export function PantryClient({ remaining }: { remaining: Remaining }) {
                   await addPlanEntry({ date: planDate, slot, title: recipe.title, calories: recipe.macros.calories,
                     protein: recipe.macros.protein, fiber: recipe.macros.fiber, netCarbs: recipe.macros.netCarbs, fat: recipe.macros.fat,
                     ingredients: recipe.ingredients, source: "ai_recipe" });
-                  setPlanned(`Added to your ${slot} plan for ${planDate}.`);
+                  setPlanned(`Added to your ${slot} plan for ${formatDate(planDate, today)}.`);
                 } catch (e: any) { setPlanned(e.message || "Could not add to plan."); }
               })}>Add to meal plan</button>
               {planned && <p className="text-sm" role="status">{planned}</p>}

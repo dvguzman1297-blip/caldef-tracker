@@ -13,7 +13,7 @@ export function DayHeader({ date, today, deficitPct }: { date: string; today: st
         <Link href={`/?date=${addDays(date, -1)}`} className={step} aria-label="Previous day">
           <ChevronLeft className="size-5" aria-hidden="true" />
         </Link>
-        <h1 className="min-w-44 text-center text-xl font-bold" aria-live="polite">{dateLabel(date, today)}</h1>
+        <h2 className="min-w-44 text-center text-xl font-bold" aria-live="polite">{dateLabel(date, today)}</h2>
         {isToday ? (
           <span className={`${step} pointer-events-none opacity-30`} aria-hidden="true">
             <ChevronRight className="size-5" />

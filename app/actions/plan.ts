@@ -1,8 +1,9 @@
 "use server";
+import { getToday } from "@/lib/today";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { todayStr, isValidDate } from "@/lib/date";
+import { isValidDate } from "@/lib/date";
 import { insertMealRow } from "@/lib/meal-store";
 
 const Entry = z.object({
@@ -83,7 +84,7 @@ export async function logPlanEntry(id: string) {
     .eq("id", id).eq("user_id", u.id).single();
   if (error) throw new Error(`Could not find entry: ${error.message}`);
   if (e.logged_meal_id) throw new Error("Already logged");
-  if (e.plan_date > todayStr()) throw new Error("You can only log meals planned for today or earlier.");
+  if (e.plan_date > await getToday()) throw new Error("You can only log meals planned for today or earlier.");
   const k = Number(e.servings);
   const r1 = (x: number) => Math.round(x * k * 10) / 10;
   const mealId = await insertMealRow(supabase, u.id, {
