@@ -1,7 +1,9 @@
 "use client";
 import { useState, useTransition } from "react";
 import { Copy, Pencil, Trash2 } from "lucide-react";
-import { deleteMeal, duplicateMeal, restoreMeal, updateMeal } from "@/app/actions/meals";
+import { duplicateMeal, updateMeal } from "@/app/actions/meals";
+import { isPending as isTemp, useDay } from "@/components/day-context";
+import { useToast } from "@/components/toast";
 import type { Meal } from "@/lib/day";
 
 const SLOTS = ["breakfast", "lunch", "dinner", "snack"] as const;
@@ -13,25 +15,17 @@ const icon = "btn btn-ghost !h-11 !w-11 !p-0";
 
 export function MealItem({ meal: x }: { meal: Meal }) {
   const [editing, setEditing] = useState(false);
-  const [deleted, setDeleted] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
+  const day = useDay();
+  const toast = useToast();
+  const temp = isTemp(x); // still being saved: no actions yet
 
   const run = (fn: () => Promise<unknown>, done?: () => void) =>
     start(async () => {
       setMsg(null);
       try { await fn(); done?.(); } catch (e: any) { setMsg({ ok: false, text: e.message || "Something went wrong." }); }
     });
-
-  if (deleted) {
-    return (
-      <li className="flex items-center justify-between gap-2 text-sm" role="status">
-        <span className="text-muted">Deleted “{x.title}”.</span>
-        <button className="btn btn-ghost" disabled={pending}
-          onClick={() => run(() => restoreMeal(x.id), () => setDeleted(false))}>Undo</button>
-      </li>
-    );
-  }
 
   if (editing) {
     return (
@@ -76,13 +70,13 @@ export function MealItem({ meal: x }: { meal: Meal }) {
           </span>
         </span>
         <span className="flex shrink-0">
-          <button className={icon} aria-label={`Edit ${x.title}`} onClick={() => setEditing(true)}><Pencil className="size-4" /></button>
-          <button className={icon} aria-label={`Duplicate ${x.title} to today`} disabled={pending}
-            onClick={() => run(() => duplicateMeal(x.id), () => setMsg({ ok: true, text: "Copied to today." }))}>
+          <button className={icon} aria-label={`Edit ${x.title}`} disabled={temp} onClick={() => setEditing(true)}><Pencil className="size-4" /></button>
+          <button className={icon} aria-label={`Duplicate ${x.title} to today`} disabled={pending || temp}
+            onClick={() => run(() => duplicateMeal(x.id), () => toast({ message: "Copied to today." }))}>
             <Copy className="size-4" />
           </button>
-          <button className={icon} aria-label={`Delete ${x.title}`} disabled={pending}
-            onClick={() => run(() => deleteMeal(x.id), () => setDeleted(true))}><Trash2 className="size-4" /></button>
+          <button className={icon} aria-label={`Delete ${x.title}`} disabled={pending || temp}
+            onClick={() => day?.remove(x)}><Trash2 className="size-4" /></button>
         </span>
       </div>
       {msg && <p className={msg.ok ? "text-xs text-emerald-600" : "err"} role="status">{msg.text}</p>}

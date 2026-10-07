@@ -25,10 +25,10 @@ export function DayHeader({ date, today, deficitPct }: { date: string; today: st
         )}
         {!isToday && <Link href="/" className="ml-1 text-sm font-medium text-accent-fg underline">Back to today</Link>}
       </div>
-      <span className="pill">
+      <Link href="/profile" className="pill hover:bg-line" aria-label={`${deficitPct > 0 ? `${Math.round(deficitPct * 100)}% deficit plan` : "Maintenance plan"}. Open profile to change it`}>
         <Target className="size-3.5" aria-hidden="true" />
         {deficitPct > 0 ? `${Math.round(deficitPct * 100)}% deficit plan` : "Maintenance plan"}
-      </span>
+      </Link>
     </header>
   );
 }

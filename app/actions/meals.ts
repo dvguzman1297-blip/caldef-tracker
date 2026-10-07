@@ -3,6 +3,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getToday } from "@/lib/today";
+import { isValidDate } from "@/lib/date";
 import { Meal, insertMealRow } from "@/lib/meal-store";
 
 async function insertMeal(raw: unknown) {
@@ -75,4 +76,31 @@ export async function restoreMeal(id: string) {
     .update({ deleted_at: null }).eq("id", id).eq("user_id", user.id);
   if (error) throw new Error(`Could not restore meal: ${error.message}`);
   refresh();
+}
+
+/** One-tap re-log of a recent, frequent or saved food. Numbers come from the user's own history. */
+export async function relogMeal(input: Omit<z.input<typeof Meal>, "source">) {
+  await insertMeal({ ...input, source: "manual" });
+}
+
+/** Copies every meal in `slot` from one day to another (e.g. "copy yesterday's lunch"). Returns how many were copied. */
+export async function copyMeals(fromDate: string, slot: z.input<typeof Meal>["slot"], toDate: string) {
+  if (!isValidDate(fromDate) || !isValidDate(toDate)) throw new Error("Invalid date");
+  const { supabase, user } = await requireUser();
+  const { data: log, error: e1 } = await supabase.from("daily_logs").select("id")
+    .eq("user_id", user.id).eq("log_date", fromDate).maybeSingle();
+  if (e1) throw new Error(`Could not read that day: ${e1.message}`);
+  if (!log) return 0;
+  const { data: src, error: e2 } = await supabase.from("logged_meals").select("*")
+    .eq("daily_log_id", log.id).eq("slot", slot).is("deleted_at", null).order("created_at");
+  if (e2) throw new Error(`Could not read that day: ${e2.message}`);
+  for (const m of src ?? []) {
+    await insertMealRow(supabase, user.id, {
+      slot: m.slot, title: m.title, calories: m.calories, protein: Number(m.protein_g),
+      fiber: Number(m.fiber_g), netCarbs: Number(m.net_carbs_g), fat: Number(m.fat_g),
+      source: m.source ?? "manual", date: toDate, consumedTime: null,
+    });
+  }
+  refresh();
+  return src?.length ?? 0;
 }

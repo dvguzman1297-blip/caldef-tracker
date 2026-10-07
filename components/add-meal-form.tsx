@@ -4,6 +4,7 @@ import { Plus, Sparkles } from "lucide-react";
 import { addManualMeal } from "@/app/actions/meals";
 import { saveFood } from "@/app/actions/foods";
 import { createClient } from "@/lib/supabase/client";
+import { useDay } from "@/components/day-context";
 
 type Food = { id: string; name: string; serving: string; calories: number; protein_g: number; fiber_g: number; net_carbs_g: number; fat_g: number };
 
@@ -23,6 +24,7 @@ export function AddMealForm({ onDone, date, slot }: {
   onDone?: () => void; date?: string; slot?: (typeof SLOTS)[number]["value"];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const day = useDay();
   const [desc, setDesc] = useState("");
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -89,6 +91,18 @@ export function AddMealForm({ onDone, date, slot }: {
   }
 
   async function submit(fd: FormData) {
+    // On the dashboard's day, show the meal immediately and let the day context handle failure
+    if (day && (!date || date === day.date)) {
+      const n = (k: string) => Number(fd.get(k) || 0);
+      day.log({
+        slot: String(fd.get("slot")) as (typeof SLOTS)[number]["value"], title: String(fd.get("title") ?? ""),
+        calories: n("calories"), protein: n("protein"), fiber: n("fiber"), netCarbs: n("netCarbs"), fat: n("fat"),
+        source: String(fd.get("source")),
+      }, () => addManualMeal(fd), "Meal added.");
+      formRef.current?.reset(); setDesc(""); setAiFilled(false); setReviewed(false); setMsg(null);
+      onDone?.();
+      return;
+    }
     setAdding(true); setMsg(null);
     try {
       await addManualMeal(fd);

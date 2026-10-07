@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sumMeals } from "@/lib/totals";
 
 export type Meal = {
   id: string; slot: "breakfast" | "lunch" | "dinner" | "snack"; title: string;
@@ -18,14 +19,7 @@ export async function getDay(supabase: SupabaseClient, userId: string, date: str
     if (error) throw new Error(`Could not load your meals: ${error.message}`);
     meals = (data as Meal[]) ?? [];
   }
-  const totals = meals.reduce(
-    (t, m) => ({
-      calories: t.calories + m.calories, protein: t.protein + Number(m.protein_g),
-      fiber: t.fiber + Number(m.fiber_g), netCarbs: t.netCarbs + Number(m.net_carbs_g),
-      fat: t.fat + Number(m.fat_g),
-    }),
-    { calories: 0, protein: 0, fiber: 0, netCarbs: 0, fat: 0 }
-  );
+  const totals = sumMeals(meals);
   return { meals, totals };
 }
 

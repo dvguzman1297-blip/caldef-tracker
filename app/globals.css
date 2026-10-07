@@ -30,6 +30,12 @@
   --danger-soft: #ffe4e6;
   --track: #e2e8f0;           /* progress bar track */
   --ring: #059669;
+
+  /* Macro identity colours: always paired with a text label, 3:1+ against surface and track */
+  --m-protein: #7c3aed;
+  --m-carbs: #0369a1;
+  --m-fat: #b45309;
+  --m-fiber: #047857;
 }
 .dark {
   --app-bg: #0b0f19;
@@ -54,6 +60,11 @@
   --danger-soft: #fb718522;
   --track: #2a3350;
   --ring: #34d399;
+
+  --m-protein: #a78bfa;
+  --m-carbs: #38bdf8;
+  --m-fat: #fbbf24;
+  --m-fiber: #34d399;
 }
 
 /* Expose tokens as Tailwind utilities: bg-surface, text-fg-muted, border-line, bg-accent ... */
@@ -89,6 +100,11 @@ body {
   background: var(--surface); border: 1px solid var(--border); border-radius: 1rem;
 }
 .card-elevated { background: var(--surface-2); }
+/* The one dominant card per page: accent edge + lift. Secondary cards stay flat (.glass). */
+.hero-card {
+  background: var(--surface); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 1.25rem; box-shadow: 0 10px 30px -12px color-mix(in srgb, var(--accent) 35%, transparent);
+}
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
