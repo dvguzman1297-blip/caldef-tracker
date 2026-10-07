@@ -1,36 +1,131 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ---------------------------------------------------------------------------
+   Design tokens
+   Elevation (dark): app #0B0F19 -> card #161C2E -> elevated #212942
+   Contrast on card surface (dark): fg 14.9:1, fg-muted 7.7:1, fg-subtle 5.6:1 (all >= AA 4.5:1)
+   Accent is reserved for primary CTAs, active nav and progress indicators.
+   ------------------------------------------------------------------------- */
+:root {
+  --app-bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef2f7;       /* hover / elevated */
+  --surface-inset: #f4f7fb;   /* inputs, table zebra */
+  --border: #d5dce6;
+  --border-strong: #b3bdcc;
+
+  --fg: #0f172a;
+  --fg-muted: #475569;        /* 7.6:1 on white */
+  --fg-subtle: #5b6779;       /* 5.6:1 on white */
+
+  --accent: #047857;          /* white text: 5.5:1 */
+  --accent-hover: #065f46;
+  --on-accent: #ffffff;
+  --accent-soft: #d1fae5;
+  --accent-fg: #047857;       /* accent used as text/icon */
+
+  --warn: #b45309;
+  --danger: #be123c;
+  --danger-soft: #ffe4e6;
+  --track: #e2e8f0;           /* progress bar track */
+  --ring: #059669;
+}
+.dark {
+  --app-bg: #0b0f19;
+  --surface: #161c2e;
+  --surface-2: #212942;
+  --surface-inset: #0f1424;
+  --border: #2a3350;
+  --border-strong: #3b4668;
+
+  --fg: #e8ecf5;
+  --fg-muted: #a3aec2;        /* 7.7:1 on #161C2E */
+  --fg-subtle: #8b96ad;       /* 5.6:1 on #161C2E */
+
+  --accent: #10b981;          /* dark text on it: 7.4:1 */
+  --accent-hover: #34d399;
+  --on-accent: #04231a;
+  --accent-soft: #10b98126;
+  --accent-fg: #34d399;
+
+  --warn: #fbbf24;
+  --danger: #fb7185;
+  --danger-soft: #fb718522;
+  --track: #2a3350;
+  --ring: #34d399;
+}
+
+/* Expose tokens as Tailwind utilities: bg-surface, text-fg-muted, border-line, bg-accent ... */
+@theme inline {
+  --color-app: var(--app-bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-inset: var(--surface-inset);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-track: var(--track);
+}
+
 body {
   min-height: 100vh;
-  color: #0f172a;
-  background: linear-gradient(135deg, #ecfdf5 0%, #eff6ff 50%, #f5f3ff 100%) fixed;
+  color: var(--fg);
+  background: var(--app-bg);
 }
-.dark body {
-  color: #e2e8f0;
-  background: radial-gradient(900px 500px at 10% -10%, #14532d55, transparent),
-              radial-gradient(800px 500px at 100% 0%, #4c1d9555, transparent), #0a0f1c fixed;
-}
+
+/* Card surface (kept under the legacy `.glass` name so every page inherits it) */
 .glass {
-  background: rgba(255,255,255,.62); border: 1px solid rgba(255,255,255,.8);
-  backdrop-filter: blur(14px); border-radius: 1rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 1rem;
 }
-.dark .glass { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); }
+.card-elevated { background: var(--surface-2); }
+
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
   padding: .55rem 1rem; border-radius: .75rem; font-weight: 600; font-size: .875rem;
-  color: #fff; background: linear-gradient(135deg,#059669,#0d9488);
-  transition: transform .15s, opacity .15s; cursor: pointer;
+  color: var(--on-accent); background: var(--accent);
+  transition: background-color .15s, transform .15s, opacity .15s; cursor: pointer;
 }
-.btn:hover { transform: translateY(-1px); } .btn:active { transform: scale(.98); }
+.btn:hover { background: var(--accent-hover); }
+.btn:active { transform: scale(.98); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
-.btn-ghost { background: transparent; color: inherit; border: 1px solid rgba(100,116,139,.35); }
+.btn-ghost { background: transparent; color: var(--fg); border: 1px solid var(--border-strong); }
+.btn-ghost:hover { background: var(--surface-2); }
+
 .input {
   width: 100%; padding: .55rem .75rem; border-radius: .75rem; font-size: .9rem;
-  border: 1px solid rgba(100,116,139,.35); background: rgba(255,255,255,.7); color: inherit;
+  border: 1px solid var(--border-strong); background: var(--surface-inset); color: var(--fg);
 }
-.dark .input { background: rgba(255,255,255,.06); }
-.input:focus-visible, .btn:focus-visible { outline: 2px solid #10b981; outline-offset: 2px; }
-.label { display: block; font-size: .8rem; margin-bottom: .25rem; opacity: .75; }
-.err { color: #e11d48; font-size: .78rem; margin-top: .2rem; }
+.input::placeholder { color: var(--fg-subtle); }
+.input:focus-visible, .btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.label { display: block; font-size: .8rem; font-weight: 500; margin-bottom: .25rem; color: var(--fg-muted); }
+.err { color: var(--danger); font-size: .78rem; margin-top: .2rem; }
+
+/* Secondary text helpers (replace `opacity-70`, which drops below AA on dark surfaces) */
+.text-muted { color: var(--fg-muted); }
+.text-subtle { color: var(--fg-subtle); }
+
+/* Small status pill */
+.pill {
+  display: inline-flex; align-items: center; gap: .375rem; border-radius: 9999px;
+  padding: .25rem .75rem; font-size: .75rem; font-weight: 600;
+  background: var(--surface-2); color: var(--fg-muted); border: 1px solid var(--border);
+}
+
+dialog.sheet {
+  margin: auto; padding: 0; border: 0; background: transparent; color: inherit;
+  width: min(36rem, calc(100vw - 1.5rem)); max-height: 90vh; overflow: visible;
+}
+dialog.sheet::backdrop { background: rgb(0 0 0 / .6); }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

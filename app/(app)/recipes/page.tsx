@@ -18,7 +18,7 @@ export default async function RecipesPage() {
   return (
     <>
       <h1 className="text-2xl font-bold">Pantry to plate</h1>
-      <p className="text-sm opacity-70">
+      <p className="text-sm text-muted">
         Recipes are tuned to what you have left today: {Math.max(Math.round(remaining.calories), 0)} kcal and {Math.max(Math.round(remaining.protein), 0)}g protein.
       </p>
       <PantryClient remaining={remaining} />

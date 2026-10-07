@@ -181,7 +181,7 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
                 <X className="size-5" aria-hidden="true" />
               </button>
             </div>
-            <AddMealForm bare onDone={() => setLogOpen(false)} />
+            <AddMealForm onDone={() => setLogOpen(false)} />
           </motion.div>
         </div>
       )}

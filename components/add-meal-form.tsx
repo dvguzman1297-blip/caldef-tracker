@@ -19,8 +19,8 @@ const FIELDS = [
   ["netCarbs", "Net carbs g"], ["fat", "Fat g"],
 ] as const;
 
-export function AddMealForm({ bare = false, onDone, date }: {
-  bare?: boolean; onDone?: () => void; date?: string;
+export function AddMealForm({ onDone, date, slot }: {
+  onDone?: () => void; date?: string; slot?: (typeof SLOTS)[number]["value"];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [desc, setDesc] = useState("");
@@ -128,7 +128,7 @@ export function AddMealForm({ bare = false, onDone, date }: {
       <form ref={formRef} action={submit} className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
         {date && <input type="hidden" name="date" value={date} />}
         <input type="hidden" name="source" value={aiFilled ? "ai_estimate" : "manual"} />
-        <select name="slot" className="input" aria-label="Meal slot">
+        <select name="slot" className="input" aria-label="Meal slot" defaultValue={slot}>
           {SLOTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
         <input name="title" required placeholder="Meal name" className="input md:col-span-3" />
@@ -154,11 +154,5 @@ export function AddMealForm({ bare = false, onDone, date }: {
     </>
   );
 
-  if (bare) return <div>{body}</div>;
-  return (
-    <details id="add-meal" className="glass p-4">
-      <summary className="cursor-pointer font-semibold">Add a meal manually</summary>
-      {body}
-    </details>
-  );
+  return <div>{body}</div>;
 }

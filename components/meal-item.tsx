@@ -26,7 +26,7 @@ export function MealItem({ meal: x }: { meal: Meal }) {
   if (deleted) {
     return (
       <li className="flex items-center justify-between gap-2 text-sm" role="status">
-        <span className="opacity-70">Deleted “{x.title}”.</span>
+        <span className="text-muted">Deleted “{x.title}”.</span>
         <button className="btn btn-ghost" disabled={pending}
           onClick={() => run(() => restoreMeal(x.id), () => setDeleted(false))}>Undo</button>
       </li>
@@ -70,7 +70,7 @@ export function MealItem({ meal: x }: { meal: Meal }) {
           {x.source?.startsWith("ai") && (
             <span className="ml-2 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase">AI estimate</span>
           )}
-          <span className="block text-xs opacity-70">
+          <span className="block text-xs text-muted">
             {x.consumed_time && `${x.consumed_time.slice(0, 5)} · `}
             {x.calories.toLocaleString("en-US")} kcal · {x.protein_g}g P · {x.fiber_g}g F · {x.net_carbs_g}g NC · {x.fat_g}g fat
           </span>
