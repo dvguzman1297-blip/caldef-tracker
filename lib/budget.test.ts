@@ -26,3 +26,15 @@ describe("defaultSlot", () => {
   it.each([[7, "breakfast"], [12, "lunch"], [16, "snack"], [19, "dinner"], [23, "snack"], [2, "snack"]])(
     "hour %i -> %s", (h, slot) => expect(defaultSlot(h)).toBe(slot));
 });
+
+import { targetFit } from "./budget";
+describe("targetFit", () => {
+  it("is on target within 10%", () => {
+    expect(targetFit(700, 760)).toEqual({ delta: -60, state: "on" });
+    expect(targetFit(830, 760).state).toBe("on");
+  });
+  it("flags under and over", () => {
+    expect(targetFit(500, 760).state).toBe("under");
+    expect(targetFit(900, 760)).toEqual({ delta: 140, state: "over" });
+  });
+});

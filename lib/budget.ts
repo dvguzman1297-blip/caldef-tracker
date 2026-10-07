@@ -37,3 +37,12 @@ export function defaultSlot(hour: number): Slot {
   if (hour >= 17 && hour < 22) return "dinner";
   return "snack";
 }
+
+/** How a recipe's value compares with its per-meal target (within +/-10% counts as on target). */
+export function targetFit(value: number, target: number, tolerance = 0.1) {
+  const ratio = target > 0 ? value / target : 0;
+  return {
+    delta: Math.round(value - target),
+    state: (ratio < 1 - tolerance ? "under" : ratio > 1 + tolerance ? "over" : "on") as "under" | "on" | "over",
+  };
+}

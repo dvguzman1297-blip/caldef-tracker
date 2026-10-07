@@ -25,16 +25,23 @@ export function TagInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState("");
   const [announce, setAnnounce] = useState("");
+  const [notice, setNotice] = useState("");
   const full = value.length >= maxTags;
 
   function add(raw: string[]) {
     const seen = new Set(value.map((v) => v.toLowerCase()));
     const next = [...value];
+    const notes: string[] = [];
     for (const part of raw) {
-      const t = part.trim().replace(/\s+/g, " ").slice(0, maxTagLength);
-      if (!t || seen.has(t.toLowerCase()) || next.length >= maxTags) continue;
+      const clean = part.trim().replace(/\s+/g, " ");
+      const t = clean.slice(0, maxTagLength);
+      if (!t) continue;
+      if (seen.has(t.toLowerCase())) { notes.push(`“${t}” is already in your list.`); continue; }
+      if (next.length >= maxTags) { notes.push(`You can add up to ${maxTags} ingredients. Remove one to add another.`); break; }
+      if (clean.length > maxTagLength) notes.push(`“${t}” was shortened to ${maxTagLength} characters.`);
       seen.add(t.toLowerCase()); next.push(t);
     }
+    setNotice(notes[0] ?? "");
     if (next.length !== value.length) {
       onChange(next);
       setAnnounce(`Added ${next[next.length - 1]}`);
@@ -44,6 +51,7 @@ export function TagInput({
   const remove = (i: number) => {
     setAnnounce(`Removed ${value[i]}`);
     onChange(value.filter((_, k) => k !== i));
+    setNotice("");
     inputRef.current?.focus();
   };
 
@@ -65,7 +73,7 @@ export function TagInput({
         ))}
         <input id={id} ref={inputRef} value={draft} disabled={full}
           aria-invalid={!!error} aria-describedby={`${id}-hint`}
-          placeholder={full ? "Ingredient limit reached" : value.length ? "Add another…" : placeholder}
+          placeholder={full ? `Limit of ${maxTags} reached` : value.length ? "Add another…" : placeholder}
           className="min-w-32 flex-1 bg-transparent px-2 py-1 text-sm outline-none placeholder:text-fg-subtle"
           onChange={(e) => {
             const v = e.target.value;
@@ -87,8 +95,10 @@ export function TagInput({
           onBlur={commit} />
       </div>
       <p id={`${id}-hint`} className="mt-1 text-xs text-subtle">
-        Press Enter or comma after each item. {value.length}/{maxTags} added.
+        Press Enter or comma after each item. <span className={full ? "font-semibold text-warn" : ""}>{value.length}/{maxTags} added.</span>
       </p>
+      {notice && <p className="mt-1 text-sm text-warn" role="status">{notice}</p>}
+      {full && !notice && <p className="mt-1 text-sm text-warn">You&apos;ve reached the limit of {maxTags} ingredients.</p>}
       {error && <p className="err" role="alert">{error}</p>}
 
       {open.length > 0 && !full && (
