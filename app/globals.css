@@ -13,7 +13,7 @@
   --surface-2: #eef2f7;       /* hover / elevated */
   --surface-inset: #f4f7fb;   /* inputs, table zebra */
   --border: #d5dce6;
-  --border-strong: #b3bdcc;
+  --border-strong: #7b8aa1;
 
   --fg: #0f172a;
   --fg-muted: #475569;        /* 7.6:1 on white */
@@ -25,10 +25,14 @@
   --accent-soft: #d1fae5;
   --accent-fg: #047857;       /* accent used as text/icon */
 
-  --warn: #b45309;
+  --warn: #a94d07;
   --danger: #be123c;
   --danger-soft: #ffe4e6;
   --track: #e2e8f0;           /* progress bar track */
+
+  /* Elevation: flat cards, raised hero, floating overlays */
+  --shadow-raised: 0 10px 30px -12px rgb(15 23 42 / .25);
+  --shadow-overlay: 0 20px 50px -12px rgb(15 23 42 / .35);
   --ring: #059669;
 
   /* Macro identity colours: always paired with a text label, 3:1+ against surface and track */
@@ -43,7 +47,7 @@
   --surface-2: #212942;
   --surface-inset: #0f1424;
   --border: #2a3350;
-  --border-strong: #3b4668;
+  --border-strong: #6b7aa3;
 
   --fg: #e8ecf5;
   --fg-muted: #a3aec2;        /* 7.7:1 on #161C2E */
@@ -59,6 +63,8 @@
   --danger: #fb7185;
   --danger-soft: #fb718522;
   --track: #2a3350;
+  --shadow-raised: 0 10px 30px -12px rgb(0 0 0 / .6);
+  --shadow-overlay: 0 20px 50px -12px rgb(0 0 0 / .7);
   --ring: #34d399;
 
   --m-protein: #a78bfa;
@@ -103,7 +109,7 @@ body {
 /* The one dominant card per page: accent edge + lift. Secondary cards stay flat (.glass). */
 .hero-card {
   background: var(--surface); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
-  border-radius: 1.25rem; box-shadow: 0 10px 30px -12px color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 1.25rem; box-shadow: var(--shadow-raised);
 }
 
 .btn {
@@ -124,6 +130,8 @@ body {
 }
 .input::placeholder { color: var(--fg-subtle); }
 .input:focus-visible, .btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+/* Every interactive element gets a visible keyboard focus ring */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .label { display: block; font-size: .8rem; font-weight: 500; margin-bottom: .25rem; color: var(--fg-muted); }
 .err { color: var(--danger); font-size: .78rem; margin-top: .2rem; }
 
@@ -142,6 +150,16 @@ dialog.sheet {
   margin: auto; padding: 0; border: 0; background: transparent; color: inherit;
   width: min(36rem, calc(100vw - 1.5rem)); max-height: 90vh; overflow: visible;
 }
-dialog.sheet::backdrop { background: rgb(0 0 0 / .6); }
+dialog.sheet::backdrop, dialog.sheet-bottom::backdrop { background: rgb(0 0 0 / .6); }
+dialog.sheet-bottom {
+  margin: auto 0 0; padding: 0; border: 0; background: transparent; color: inherit;
+  width: 100%; max-width: 100%; max-height: 90vh; overflow: visible;
+}
+
+.skip-link {
+  position: absolute; left: .75rem; top: -4rem; z-index: 100; padding: .6rem 1rem; border-radius: .75rem;
+  background: var(--accent); color: var(--on-accent); font-weight: 600; transition: top .15s;
+}
+.skip-link:focus { top: .75rem; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

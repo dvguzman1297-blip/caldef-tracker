@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { inferSplit } from "@/lib/health";
 import { getToday } from "@/lib/today";
+import { OnboardingSteps } from "@/components/onboarding";
 import { PageShell } from "@/components/page-shell";
 import { PrivacyPanel } from "@/components/privacy-panel";
 import { ProfileForm } from "@/components/profile-form";
@@ -20,7 +21,9 @@ export default async function ProfilePage() {
     : undefined;
 
   return (
-    <PageShell title="Your profile" subtitle="Your daily targets are calculated from these details.">
+    <PageShell title={m ? "Your profile" : "Welcome to CalDef"}
+      subtitle={m ? "Your daily targets are calculated from these details." : "Step 1 of 3: tell us about you and we'll calculate your daily targets."}>
+      {!m && <OnboardingSteps current={1} />}
       <ProfileForm today={today} isNew={!m}
         saved={m ? {
           calories: m.target_calories, protein: m.target_protein_g, fiber: m.target_fiber_g,

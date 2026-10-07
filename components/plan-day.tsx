@@ -34,7 +34,7 @@ export function PlanDay({ date, canLog, entries, foods, targets }: {
         <b>Planned: {Math.round(tot.calories)} of {targets.calories} kcal</b> · {Math.round(tot.protein)}/{targets.protein}g protein ·{" "}
         {Math.round(tot.fiber)}/{targets.fiber}g fiber · {Math.round(tot.netCarbs)}/{targets.netCarbs}g net carbs ·{" "}
         {Math.round(tot.fat)}/{targets.fat}g fat
-        {tot.calories > targets.calories * 1.05 && <span className="block text-amber-600 dark:text-amber-400">This plan is over your calorie target.</span>}
+        {tot.calories > targets.calories * 1.05 && <span className="block text-warn">This plan is over your calorie target.</span>}
       </div>
       {err && <p className="err" role="alert">{err}</p>}
 
@@ -44,15 +44,15 @@ export function PlanDay({ date, canLog, entries, foods, targets }: {
           return (
             <section key={slot} className="glass p-4" aria-label={`${slot} plan`}>
               <h3 className="mb-2 font-semibold capitalize">{slot}</h3>
-              {items.length === 0 && <p className="text-sm opacity-60">Nothing planned.</p>}
+              {items.length === 0 && <p className="text-sm text-muted">Nothing planned.</p>}
               <ul className="space-y-2">
                 {items.map((e, i) => (
                   <li key={e.id} className="text-sm">
                     <div className="flex items-start justify-between gap-1">
                       <span className="min-w-0">
                         <span className="font-medium">{e.title}</span>
-                        {e.logged && <span className="ml-2 rounded-full bg-emerald-600/20 px-2 py-0.5 text-[10px] font-semibold uppercase">Logged</span>}
-                        <span className="block text-xs opacity-70">
+                        {e.logged && <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold uppercase">Logged</span>}
+                        <span className="block text-xs text-muted">
                           {Math.round(e.calories * e.servings)} kcal · {Math.round(e.protein * e.servings)}g P · {Math.round(e.fiber * e.servings)}g F
                         </span>
                       </span>
@@ -67,7 +67,7 @@ export function PlanDay({ date, canLog, entries, foods, targets }: {
                     </div>
                     <div className="mt-1 flex items-center gap-2">
                       <label className="text-xs">Servings{" "}
-                        <input type="number" min="0.25" max="20" step="0.25" defaultValue={e.servings} disabled={e.logged || pending}
+                        <input type="number" min="0.25" max="20" step="0.25" defaultValue={e.servings} aria-label={`Servings of ${e.title}`} disabled={e.logged || pending}
                           className="input !h-9 !w-20" onBlur={(ev) => {
                             const v = Number(ev.target.value);
                             if (v > 0 && v !== e.servings) run(() => setPlanServings(e.id, v));
@@ -114,11 +114,16 @@ function AddEntry({ date, foods, run, pending }: {
           form.reset(); setFoodId("");
         });
       }}>
-        <select name="slot" className="input" aria-label="Meal slot">
-          {SLOTS.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
-        </select>
+        <div>
+          <label className="label" htmlFor="plan-slot">Meal</label>
+          <select id="plan-slot" name="slot" className="input !min-h-11">
+            {SLOTS.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
+          </select>
+        </div>
         {foods.length > 0 && (
-          <select className="input md:col-span-3" aria-label="Saved food" value={foodId} onChange={(e) => {
+          <div className="md:col-span-3">
+          <label className="label" htmlFor="plan-saved">Fill from a saved food</label>
+          <select id="plan-saved" className="input !min-h-11" value={foodId} onChange={(e) => {
             setFoodId(e.target.value);
             const f = foods.find((x) => x.id === e.target.value); if (!f) return;
             const set = (n: string, v: string | number) => {
@@ -127,14 +132,24 @@ function AddEntry({ date, foods, run, pending }: {
             set("title", f.name); set("calories", f.calories); set("protein", f.protein_g);
             set("fiber", f.fiber_g); set("netCarbs", f.net_carbs_g); set("fat", f.fat_g);
           }}>
-            <option value="">Fill from a saved food…</option>
+            <option value="">Choose…</option>
             {foods.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.serving}, {f.calories} kcal)</option>)}
           </select>
+          </div>
         )}
-        <input id="plan-title" name="title" required placeholder="Meal name" aria-label="Meal name" className="input col-span-2 md:col-span-3" />
-        <input name="servings" type="number" min="0.25" max="20" step="0.25" defaultValue="1" aria-label="Servings" className="input" />
-        {([["calories", "kcal"], ["protein", "Protein g"], ["fiber", "Fiber g"], ["netCarbs", "Net carbs g"], ["fat", "Fat g"]] as const).map(([n, l]) => (
-          <input key={n} id={`plan-${n}`} name={n} type="number" step="0.1" min="0" required placeholder={`${l} (per serving)`} aria-label={`${l} per serving`} className="input" />
+        <div className="col-span-2 md:col-span-3">
+          <label className="label" htmlFor="plan-title">Meal name</label>
+          <input id="plan-title" name="title" required className="input !min-h-11" />
+        </div>
+        <div>
+          <label className="label" htmlFor="plan-servings">Servings</label>
+          <input id="plan-servings" name="servings" type="number" inputMode="decimal" min="0.25" max="20" step="0.25" defaultValue="1" className="input !min-h-11" />
+        </div>
+        {([["calories", "Calories (per serving)"], ["protein", "Protein g"], ["fiber", "Fiber g"], ["netCarbs", "Net carbs g"], ["fat", "Fat g"]] as const).map(([n, l]) => (
+          <div key={n}>
+            <label className="label" htmlFor={`plan-${n}`}>{l}</label>
+            <input id={`plan-${n}`} name={n} type="number" inputMode="decimal" step="0.1" min="0" required className="input !min-h-11" />
+          </div>
         ))}
         <button className="btn" disabled={pending}><Plus className="size-4" />Add</button>
       </form>

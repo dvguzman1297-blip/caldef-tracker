@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <ToastProvider>
       <TimezoneSync />
       <Nav isAdmin={!!data} />
-      <main className="mx-auto max-w-5xl p-4 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-16">{children}</main>
+      <main id="main" tabIndex={-1} className="mx-auto max-w-5xl outline-none p-4 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-16">{children}</main>
     </ToastProvider>
   );
 }

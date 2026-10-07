@@ -24,8 +24,8 @@ export default async function Admin() {
     <>
       <h1 className="text-2xl font-bold">Admin</h1>
       <div className="grid grid-cols-2 gap-3">
-        <div className="glass p-4"><div className="text-3xl font-bold">{users}</div><div className="text-sm opacity-70">Users</div></div>
-        <div className="glass p-4"><div className="text-3xl font-bold">{meals7}</div><div className="text-sm opacity-70">Meals logged, last 7 days</div></div>
+        <div className="glass p-4"><div className="text-3xl font-bold">{users}</div><div className="text-sm text-muted">Users</div></div>
+        <div className="glass p-4"><div className="text-3xl font-bold">{meals7}</div><div className="text-sm text-muted">Meals logged, last 7 days</div></div>
       </div>
 
       <section className="glass p-4">
@@ -33,7 +33,7 @@ export default async function Admin() {
         <ul className="divide-y divide-black/10 text-sm dark:divide-white/10">
           {(profiles ?? []).map((p) => (
             <li key={p.id} className="flex items-center justify-between py-2">
-              <span>{p.full_name ?? p.id.slice(0, 8)} {admins.has(p.id) && <b className="text-emerald-600">(admin)</b>}</span>
+              <span>{p.full_name ?? p.id.slice(0, 8)} {admins.has(p.id) && <b className="text-accent-fg">(admin)</b>}</span>
               <form action={setAdmin.bind(null, p.id, !admins.has(p.id))}>
                 <button className="btn btn-ghost !py-1">{admins.has(p.id) ? "Remove admin" : "Make admin"}</button>
               </form>
@@ -44,7 +44,7 @@ export default async function Admin() {
 
       <section className="glass p-4">
         <h2 className="mb-2 font-semibold">Recent activity</h2>
-        <p className="mb-2 text-xs opacity-70">Meal contents are intentionally not shown here. Admin access to user data is disclosed on each user&apos;s profile page.</p>
+        <p className="mb-2 text-xs text-muted">Meal contents are intentionally not shown here. Admin access to user data is disclosed on each user&apos;s profile page.</p>
         <ul className="space-y-1 text-sm">
           {(recent ?? []).map((r) => (
             <li key={r.id}>{new Date(r.created_at).toLocaleString()}: {name.get(r.user_id) ?? r.user_id.slice(0, 8)} logged a {r.slot} meal ({r.source})</li>

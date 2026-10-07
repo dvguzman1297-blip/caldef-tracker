@@ -19,12 +19,12 @@ export function PrivacyPanel() {
         <a className="btn btn-ghost" href="/api/export" download>Download my data (JSON)</a>
       </div>
       <details className="rounded-xl border border-rose-500/40 p-3">
-        <summary className="cursor-pointer font-semibold text-rose-600 dark:text-rose-400">Delete my account</summary>
+        <summary className="cursor-pointer font-semibold text-danger">Delete my account</summary>
         <p className="mt-2 text-muted">This permanently deletes your account and all your data. It can&apos;t be undone. Download your data first if you want a copy.</p>
         <div className="mt-2 flex flex-wrap items-end gap-2">
           <div><label className="label" htmlFor="confirmDelete">Type DELETE to confirm</label>
             <input id="confirmDelete" className="input" value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" /></div>
-          <button className="btn !bg-rose-600" disabled={text !== "DELETE" || pending}
+          <button className="btn !bg-danger !text-on-accent" disabled={text !== "DELETE" || pending}
             onClick={() => start(async () => {
               setErr("");
               try { await deleteAccount(text); } catch (e: any) {

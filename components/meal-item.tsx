@@ -62,7 +62,7 @@ export function MealItem({ meal: x }: { meal: Meal }) {
         <span className="min-w-0">
           <span className="font-medium">{x.title}</span>
           {x.source?.startsWith("ai") && (
-            <span className="ml-2 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase">AI estimate</span>
+            <span className="ml-2 rounded-full bg-warn/20 px-2 py-0.5 text-xs font-semibold uppercase">AI estimate</span>
           )}
           <span className="block text-xs text-muted">
             {x.consumed_time && `${x.consumed_time.slice(0, 5)} · `}

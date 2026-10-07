@@ -101,7 +101,7 @@ export function WeightLineChart({ points, today }: { points: { date: string; kg:
       </div>
       <figcaption className="mt-2 flex flex-wrap gap-x-4 text-xs text-muted">
         <span className="flex items-center gap-1.5"><span className="h-1 w-4 rounded bg-accent" aria-hidden="true" />7-day average</span>
-        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-fg-subtle opacity-50" aria-hidden="true" />Weigh-ins</span>
+        <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-fg-subtle opacity-60" aria-hidden="true" />Weigh-ins</span>
       </figcaption>
     </figure>
   );

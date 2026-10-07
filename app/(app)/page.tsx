@@ -7,6 +7,7 @@ import { buildPicks, type PickRow, type QuickPick } from "@/lib/quick-picks";
 import { getToday } from "@/lib/today";
 import { DayHeader } from "@/components/day-header";
 import { DayView } from "@/components/day-view";
+import { OnboardingCard } from "@/components/onboarding";
 import { PageShell } from "@/components/page-shell";
 import { WeightForm } from "@/components/weight-form";
 
@@ -39,6 +40,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const rows: PickRow[] = ((historyRes.data ?? []) as unknown as (Omit<PickRow, "date"> & { daily_logs: { log_date: string } })[])
     .map(({ daily_logs, ...r }) => ({ ...r, date: daily_logs.log_date }));
   const { recent, frequent } = buildPicks(rows);
+  // Brand-new user: a profile but no meal logged anywhere in the window, viewing today
+  const firstRun = date === today && !historyRes.error && rows.length === 0 && day.meals.length === 0;
   const favorites: QuickPick[] = (foodsRes.data ?? []).map((f) => ({
     title: f.name, calories: f.calories, protein: Number(f.protein_g), fiber: Number(f.fiber_g),
     netCarbs: Number(f.net_carbs_g), fat: Number(f.fat_g), count: 0, lastDate: "",
@@ -51,6 +54,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   return (
     <PageShell title="Dashboard" subtitle="Track today's calories and macros against your targets.">
       <DayHeader date={date} today={today} deficitPct={m.deficit_pct} />
+      {firstRun && <OnboardingCard targetKcal={m.target_calories} />}
 
       <DayView date={date} meals={day.meals} targets={targetsOf(m)} recent={recent} frequent={frequent} favorites={favorites}
         previousDate={previousDate} previousMeals={previous.meals} />

@@ -85,9 +85,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
       {mode !== "reset" && field("email", "Email", "email", "email")}
       {mode !== "forgot" && field("password", mode === "reset" ? "New password" : "Password", "password",
         mode === "login" ? "current-password" : "new-password")}
-      {msg && <p className={msg.ok ? "text-sm text-emerald-600" : "err"} role="status">{msg.text}</p>}
+      {msg && <p className={msg.ok ? "text-sm text-accent-fg" : "err"} role="status">{msg.text}</p>}
       <button className="btn w-full" disabled={isSubmitting}>{isSubmitting ? "Working…" : copy[mode].cta}</button>
-      <div className="flex justify-between text-sm opacity-80">
+      <div className="flex justify-between text-sm text-muted">
         {mode === "login" && <><Link href="/register">Create account</Link><Link href="/forgot-password">Forgot password?</Link></>}
         {(mode === "register" || mode === "forgot") && <Link href="/login">Back to log in</Link>}
       </div>

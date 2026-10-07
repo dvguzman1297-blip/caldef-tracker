@@ -67,14 +67,16 @@ export function AddMealForm({ onDone, date, slot }: {
 
   async function estimate() {
     setBusy(true); setMsg(null);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 25_000);
     try {
       const res = await fetch("/api/estimate-meal", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: desc }),
+        body: JSON.stringify({ description: desc }), signal: ctrl.signal,
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json) {
-        throw new Error(json?.error || `Estimate failed (status ${res.status}). Check the server terminal.`);
+        throw new Error(json?.error || `The estimate failed (status ${res.status}).`);
       }
       const f = formRef.current!, m = json.meal;
       const set = (name: string, v: string | number) =>
@@ -85,9 +87,12 @@ export function AddMealForm({ onDone, date, slot }: {
       setMsg({ ok: true, text: json.adjusted
         ? "AI estimate filled in (calories were recalculated from its macros). Check the numbers before adding."
         : "AI estimate filled in. Check the numbers before adding." });
-    } catch (e: any) {
-      setMsg({ ok: false, text: e.message || "Something went wrong. Try again." });
-    } finally { setBusy(false); }
+    } catch (e) {
+      // The AI is a convenience: on any failure the manual fields below still work
+      const text = e instanceof DOMException && e.name === "AbortError" ? "The estimate is taking too long."
+        : e instanceof Error && e.message ? e.message : "Something went wrong.";
+      setMsg({ ok: false, text: `${text} You can type the numbers in yourself below.` });
+    } finally { clearTimeout(timer); setBusy(false); }
   }
 
   async function submit(fd: FormData) {
@@ -123,7 +128,7 @@ export function AddMealForm({ onDone, date, slot }: {
           <Sparkles className="size-4" />{busy ? "Estimating…" : "Estimate with AI"}
         </button>
       </div>
-      {msg && <p className={msg.ok ? "mt-2 text-sm text-emerald-600" : "err"} role="status">{msg.text}</p>}
+      {msg && <p className={msg.ok ? "mt-2 text-sm text-accent-fg" : "err"} role="status">{msg.text}</p>}
 
       {foods.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -142,15 +147,26 @@ export function AddMealForm({ onDone, date, slot }: {
       <form ref={formRef} action={submit} className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
         {date && <input type="hidden" name="date" value={date} />}
         <input type="hidden" name="source" value={aiFilled ? "ai_estimate" : "manual"} />
-        <select name="slot" className="input" aria-label="Meal slot" defaultValue={slot}>
-          {SLOTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
-        <input name="title" required placeholder="Meal name" className="input md:col-span-3" />
+        <div>
+          <label className="label" htmlFor="am-slot">Meal</label>
+          <select id="am-slot" name="slot" className="input !min-h-11" defaultValue={slot}>
+            {SLOTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </div>
+        <div className="md:col-span-3">
+          <label className="label" htmlFor="am-title">Meal name</label>
+          <input id="am-title" name="title" required className="input !min-h-11" />
+        </div>
         {FIELDS.map(([n, l]) => (
-          <input key={n} name={n} type="number" step="0.1" min="0" required
-            placeholder={l} aria-label={l} className="input" />
+          <div key={n}>
+            <label className="label" htmlFor={`am-${n}`}>{l}</label>
+            <input id={`am-${n}`} name={n} type="number" inputMode="decimal" step="0.1" min="0" required className="input !min-h-11" />
+          </div>
         ))}
-        <input name="consumedTime" type="time" aria-label="Time eaten (optional)" className="input" />
+        <div>
+          <label className="label" htmlFor="am-time">Time eaten (optional)</label>
+          <input id="am-time" name="consumedTime" type="time" className="input !min-h-11" />
+        </div>
         {aiFilled && (
           <label className="col-span-2 flex items-start gap-2 text-sm md:col-span-4">
             <input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} className="mt-1" />
