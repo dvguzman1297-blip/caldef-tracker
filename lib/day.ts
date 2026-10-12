@@ -8,19 +8,17 @@ export type Meal = {
 };
 
 export async function getDay(supabase: SupabaseClient, userId: string, date: string) {
-  const { data: log, error: logErr } = await supabase.from("daily_logs").select("id")
-    .eq("user_id", userId).eq("log_date", date).maybeSingle();
-  if (logErr) throw new Error(`Could not load your log: ${logErr.message}`);
-  let meals: Meal[] = [];
-  if (log) {
-    const { data, error } = await supabase.from("logged_meals").select("*")
-      .eq("daily_log_id", log.id).is("deleted_at", null)
-      .order("consumed_time", { nullsFirst: false }).order("created_at");
-    if (error) throw new Error(`Could not load your meals: ${error.message}`);
-    meals = (data as Meal[]) ?? [];
-  }
-  const totals = sumMeals(meals);
-  return { meals, totals };
+  // One round trip: filter meals by the date of their parent log via an inner join
+  const { data, error } = await supabase.from("logged_meals").select("*, daily_logs!inner(log_date)")
+    .eq("user_id", userId).eq("daily_logs.log_date", date).is("deleted_at", null)
+    .order("consumed_time", { nullsFirst: false }).order("created_at");
+  if (error) throw new Error(`Could not load your meals: ${error.message}`);
+  const meals = ((data ?? []) as (Meal & { daily_logs?: unknown })[]).map((row) => {
+    const meal = { ...row };
+    delete meal.daily_logs;
+    return meal as Meal;
+  });
+  return { meals, totals: sumMeals(meals) };
 }
 
 // Carbs are tracked as NET carbs, so the net-carb target is carbs minus fiber.

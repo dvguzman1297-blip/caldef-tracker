@@ -1,18 +1,17 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth";
 import { getDay, targetsOf } from "@/lib/day";
 import { getToday } from "@/lib/today";
 import { PageShell } from "@/components/page-shell";
 import { PantryClient } from "@/components/pantry-client";
 
 export default async function RecipesPage() {
-  const s = await createClient();
-  const { data: { user } } = await s.auth.getUser();
-  const { data: m } = await s.from("health_metrics").select("*").eq("user_id", user!.id).maybeSingle();
+  const { supabase: s, uid } = await requireAuth();
+  const { data: m } = await s.from("health_metrics").select("*").eq("user_id", uid).maybeSingle();
   if (!m) redirect("/profile");
   const t = targetsOf(m);
   const today = await getToday();
-  const { totals } = await getDay(s, user!.id, today);
+  const { totals } = await getDay(s, uid, today);
   const remaining = {
     calories: t.calories - totals.calories, protein: t.protein - totals.protein,
     fiber: t.fiber - totals.fiber, netCarbs: t.netCarbs - totals.netCarbs, fat: t.fat - totals.fat,

@@ -2,7 +2,7 @@ import { getToday } from "@/lib/today";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth";
 import { targetsOf } from "@/lib/day";
 import { addDays, dateLabel, isValidDate } from "@/lib/date";
 import { PageShell } from "@/components/page-shell";
@@ -14,14 +14,13 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   const { date: q } = await searchParams;
   const today = await getToday();
   const date = isValidDate(q) ? q : today; // planning may look ahead, so future dates are fine
-  const s = await createClient();
-  const { data: { user } } = await s.auth.getUser();
+  const { supabase: s, uid } = await requireAuth();
 
   const [metricsRes, weekRes, foodsRes] = await Promise.all([
-    s.from("health_metrics").select("*").eq("user_id", user!.id).maybeSingle(),
-    s.from("meal_plan_entries").select("*").eq("user_id", user!.id)
+    s.from("health_metrics").select("*").eq("user_id", uid).maybeSingle(),
+    s.from("meal_plan_entries").select("*").eq("user_id", uid)
       .gte("plan_date", date).lte("plan_date", addDays(date, 6)).order("position"),
-    s.from("saved_foods").select("id,name,serving,calories,protein_g,fiber_g,net_carbs_g,fat_g").eq("user_id", user!.id).order("name"),
+    s.from("saved_foods").select("id,name,serving,calories,protein_g,fiber_g,net_carbs_g,fat_g").eq("user_id", uid).order("name"),
   ]);
   for (const r of [metricsRes, weekRes, foodsRes]) if (r.error) throw new Error(`Could not load your plan: ${r.error.message}`);
   if (!metricsRes.data) redirect("/profile");

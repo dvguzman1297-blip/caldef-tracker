@@ -25,7 +25,6 @@ export function KcalBarChart({ days, target, today }: {
   return (
     <figure>
       <div className="relative pl-14">
-        <span className="absolute left-0 top-0 text-xs tabular-nums text-muted">{Math.round(max).toLocaleString("en-US")}</span>
         <span className="absolute bottom-0 left-0 text-xs tabular-nums text-muted">0</span>
         <span className="absolute left-0 -translate-y-1/2 text-xs font-semibold tabular-nums text-fg"
           style={{ top: `${(y(target) / H) * 100}%` }}>Goal</span>

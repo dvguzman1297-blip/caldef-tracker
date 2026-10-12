@@ -9,6 +9,7 @@ import { sumMeals } from "@/lib/totals";
 import { AddItemButton } from "@/components/add-item-button";
 import { DayProvider, useDay } from "@/components/day-context";
 import { LogCard } from "@/components/log-card";
+import { MacroLine } from "@/components/macro-line";
 import { MacroSummary } from "@/components/macro-summary";
 import { MealItem } from "@/components/meal-item";
 import { QuickFab } from "@/components/quick-fab";
@@ -60,35 +61,41 @@ function MealCard({ slot, items, date, previousDate, previous }: {
   slot: Slot; items: Meal[]; date: string; previousDate: string; previous: Meal[];
 }) {
   const day = useDay()!;
-  const kcal = Math.round(items.reduce((a, m) => a + Number(m.calories), 0));
+  const sum = sumMeals(items);
+  const kcal = Math.round(sum.calories);
   const empty = items.length === 0;
 
   const copy = previous.length > 0 && empty && (
-    <button className="btn btn-ghost !px-3 !py-1.5 !text-xs" aria-label={`Copy yesterday's ${slot}`}
+    <button className="btn btn-ghost !min-h-11 !px-3.5" aria-label={`Copy yesterday's ${slot}`}
       onClick={() => day.log(
         previous.map((m) => ({ slot, title: m.title, calories: m.calories, protein: Number(m.protein_g),
           fiber: Number(m.fiber_g), netCarbs: Number(m.net_carbs_g), fat: Number(m.fat_g), source: m.source ?? "manual" })),
         () => copyMeals(previousDate, slot, date),
         `Copied ${previous.length} ${previous.length === 1 ? "item" : "items"} from yesterday's ${slot}.`)}>
-      <Copy className="size-3.5" aria-hidden="true" />Copy yesterday&apos;s
+      <Copy className="size-4" aria-hidden="true" />Copy yesterday&apos;s
     </button>
   );
 
   // Empty meals collapse to one slim row
   if (empty) {
     return (
-      <div className="glass flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
-        <h3 className="font-semibold capitalize">{slot} <span className="ml-1 text-sm font-normal text-muted">Nothing logged</span></h3>
+      <div className="glass flex flex-wrap items-center justify-between gap-2 px-4 py-2">
+        <h3 className="font-semibold capitalize">{slot} <span className="ml-1 text-sm font-normal text-muted">Nothing logged yet</span></h3>
         <div className="flex items-center gap-2">{copy}<AddItemButton slot={slot} date={date} /></div>
       </div>
     );
   }
   return (
     <div className="glass p-4">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="font-semibold capitalize">
-          {slot} <span className="ml-1 text-sm font-normal text-muted tabular-nums">{kcal.toLocaleString("en-US")} kcal</span>
-        </h3>
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="font-semibold capitalize">
+            {slot} <span className="ml-1 text-sm font-normal text-muted tabular-nums">{kcal.toLocaleString("en-US")} kcal</span>
+          </h3>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+            <MacroLine short protein={sum.protein} netCarbs={sum.netCarbs} fat={sum.fat} />
+          </p>
+        </div>
         <AddItemButton slot={slot} date={date} />
       </div>
       <ul className="space-y-2">{items.map((x) => <MealItem key={x.id} meal={x} />)}</ul>

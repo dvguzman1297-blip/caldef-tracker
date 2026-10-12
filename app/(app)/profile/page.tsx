@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth";
 import { inferSplit } from "@/lib/health";
 import { getToday } from "@/lib/today";
 import { OnboardingSteps } from "@/components/onboarding";
@@ -7,10 +7,9 @@ import { PrivacyPanel } from "@/components/privacy-panel";
 import { ProfileForm } from "@/components/profile-form";
 
 export default async function ProfilePage() {
-  const s = await createClient();
-  const { data: { user } } = await s.auth.getUser();
-  const { data: p } = await s.from("profiles").select("*").eq("id", user!.id).single();
-  const { data: m } = await s.from("health_metrics").select("*").eq("user_id", user!.id).maybeSingle();
+  const { supabase: s, uid } = await requireAuth();
+  const { data: p } = await s.from("profiles").select("*").eq("id", uid).single();
+  const { data: m } = await s.from("health_metrics").select("*").eq("user_id", uid).maybeSingle();
   const today = await getToday();
 
   const weight = p?.current_weight_kg ? Number(p.current_weight_kg) : undefined;
@@ -34,6 +33,8 @@ export default async function ProfilePage() {
           targetWeightKg: p?.target_weight_kg ? Number(p.target_weight_kg) : undefined,
           age: p?.age ?? undefined, sex: p?.sex ?? undefined, activity: p?.activity_level ?? undefined,
           deficitPct: m ? Number(m.deficit_pct) : undefined, ...split,
+          calorieMode: m?.is_custom_target ? "custom" : "recommended",
+          customKcal: m?.is_custom_target ? String(m.target_calories) : "",
           dietaryPreferences: (p?.dietary_preferences ?? []).join(", "),
           allergens: p?.allergens ?? [],
         }} />

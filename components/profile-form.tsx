@@ -6,7 +6,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { AlertTriangle, Info } from "lucide-react";
 import {
-  DEFAULT_DEFICIT, FAT_PCT, PROTEIN_PER_KG, computeTargets, projectLoss,
+  CUSTOM_KCAL, DEFAULT_DEFICIT, FAT_PCT, PROTEIN_PER_KG, computeTargets, projectLoss,
 } from "@/lib/health";
 import { formatDate } from "@/lib/date";
 import { saveDietary, saveProfile } from "@/app/actions/profile";
@@ -29,6 +29,9 @@ const Schema = z.object({
   deficitPct: z.number().min(0.1).max(0.25),
   proteinPerKg: z.number().min(PROTEIN_PER_KG.min).max(PROTEIN_PER_KG.max),
   fatPct: z.number().min(FAT_PCT.min).max(FAT_PCT.max),
+  calorieMode: z.enum(["recommended", "custom"]),
+  customKcal: z.string(),
+  lowAck: z.boolean(),
   dietaryPreferences: z.string().max(300),
   allergens: z.array(z.string()),
   pregnantOrNursing: z.boolean(),
@@ -38,7 +41,7 @@ const Schema = z.object({
 type V = z.infer<typeof Schema>;
 
 /** Inputs that change the calculated targets. Editing any of these brings in the health check. */
-const TARGET_KEYS = ["heightCm", "currentWeightKg", "targetWeightKg", "age", "sex", "activity", "deficitPct", "proteinPerKg", "fatPct"] as const;
+const TARGET_KEYS = ["heightCm", "currentWeightKg", "targetWeightKg", "age", "sex", "activity", "deficitPct", "proteinPerKg", "fatPct", "calorieMode", "customKcal"] as const;
 
 export type SavedTargets = { calories: number; protein: number; fiber: number; carbs: number; fat: number; bmr: number; tdee: number };
 
@@ -60,6 +63,7 @@ export function ProfileForm({ defaults, saved, isNew, today }: {
   const [error, setError] = useState("");
   const initialValues: V = {
     sex: "female", activity: "moderate", deficitPct: DEFAULT_DEFICIT, proteinPerKg: PROTEIN_PER_KG.default, fatPct: FAT_PCT.default,
+    calorieMode: "recommended", customKcal: "", lowAck: false,
     dietaryPreferences: "", allergens: [], pregnantOrNursing: false, eatingDisorderRisk: false, medicalCondition: false,
     ...defaults,
   } as V;
@@ -67,7 +71,7 @@ export function ProfileForm({ defaults, saved, isNew, today }: {
   const [savedTargets, setSavedTargets] = useState(saved);
   const [justSaved, setJustSaved] = useState(false);
 
-  const { register, control, handleSubmit, reset, formState: { errors, isSubmitting, isValid } } = useForm<V>({
+  const { register, control, handleSubmit, reset, setValue, formState: { errors, isSubmitting, isValid } } = useForm<V>({
     resolver: zodResolver(Schema), defaultValues: initialValues, mode: "onTouched",
   });
   const v = useWatch({ control }) as V;
@@ -80,12 +84,20 @@ export function ProfileForm({ defaults, saved, isNew, today }: {
   const dirty = targetDirty || dietDirty;
 
   const ready = [v.heightCm, v.currentWeightKg, v.targetWeightKg, v.age].every((x) => Number(x) > 0);
-  const preview = ready ? computeTargets({
+  const inputs = ready ? {
     weightKg: v.currentWeightKg, targetWeightKg: v.targetWeightKg, heightCm: v.heightCm,
     age: v.age, sex: v.sex, activity: v.activity, deficitPct: Number(v.deficitPct),
     proteinPerKg: Number(v.proteinPerKg), fatPct: Number(v.fatPct),
     screening: { pregnantOrNursing: !!v.pregnantOrNursing, eatingDisorderRisk: !!v.eatingDisorderRisk, medicalCondition: !!v.medicalCondition },
-  }) : null;
+  } : null;
+  const recommended = inputs ? computeTargets(inputs) : null;
+  // The user's own calorie target, when they choose to set one. Never below maintenance if the health check restricts it.
+  const customMode = v.calorieMode === "custom";
+  const customN = customMode && String(v.customKcal ?? "").trim() !== "" ? Number(v.customKcal) : NaN;
+  const customMin = recommended?.restrictedReason ? Math.round(recommended.tdee) : CUSTOM_KCAL.min;
+  const customOk = Number.isInteger(customN) && customN >= customMin && customN <= CUSTOM_KCAL.max;
+  const preview = inputs && customMode && customOk ? computeTargets({ ...inputs, customCalories: customN }) : recommended;
+  const needsAck = customMode && customOk && !!preview?.belowFloor;
   const projection = preview && !preview.restrictedReason ? projectLoss({
     weightKg: v.currentWeightKg, targetWeightKg: v.targetWeightKg, tdee: preview.tdee, targetCalories: preview.targetCalories, today,
   }) : null;
@@ -96,13 +108,14 @@ export function ProfileForm({ defaults, saved, isNew, today }: {
     ? { calories: preview.targetCalories, protein: preview.targetProteinG, fiber: preview.targetFiberG, carbs: preview.targetCarbsG, fat: preview.targetFatG, bmr: preview.bmr, tdee: preview.tdee }
     : savedTargets ?? (preview && { calories: preview.targetCalories, protein: preview.targetProteinG, fiber: preview.targetFiberG, carbs: preview.targetCarbsG, fat: preview.targetFatG, bmr: preview.bmr, tdee: preview.tdee });
 
-  const canSave = dirty && !isSubmitting && (!targetDirty || isValid);
+  const customReady = !customMode || (customOk && (!needsAck || v.lowAck));
+  const canSave = dirty && !isSubmitting && (!targetDirty || (isValid && customReady));
 
   const onSubmit = handleSubmit(async (d) => {
     setError(""); setJustSaved(false);
     try {
       if (targetDirty) {
-        await saveProfile(d);
+        await saveProfile({ ...d, customCalories: customMode && customOk ? customN : undefined, acknowledgedLowTarget: !!d.lowAck });
         if (preview) setSavedTargets({ calories: preview.targetCalories, protein: preview.targetProteinG, fiber: preview.targetFiberG, carbs: preview.targetCarbsG, fat: preview.targetFatG, bmr: preview.bmr, tdee: preview.tdee });
         toast({ message: preview?.restrictedReason ? "Profile saved. No calorie deficit was applied." : `Profile saved. Your target is ${n0(preview?.targetCalories ?? 0)} kcal a day.` });
       } else {
@@ -110,7 +123,7 @@ export function ProfileForm({ defaults, saved, isNew, today }: {
         toast({ message: "Food preferences saved. Your targets are unchanged." });
       }
       // Health-check answers are never stored: clear them after every save
-      const next = { ...d, pregnantOrNursing: false, eatingDisorderRisk: false, medicalCondition: false };
+      const next = { ...d, lowAck: false, pregnantOrNursing: false, eatingDisorderRisk: false, medicalCondition: false };
       setBaseline(next); reset(next); setJustSaved(true);
       if (isNew) router.push("/"); else router.refresh();
     } catch {
@@ -145,6 +158,9 @@ export function ProfileForm({ defaults, saved, isNew, today }: {
       {shown ? (
         <>
           <p className="text-4xl font-bold tabular-nums">{n0(shown.calories)}<span className="ml-1 text-base font-medium text-muted">kcal</span></p>
+          {(targetDirty ? customMode : baseline.calorieMode === "custom") && (
+            <p className="-mt-1 text-sm text-muted">Your own target{preview ? ` (recommended: ${n0(preview.recommendedCalories)} kcal)` : ""}</p>
+          )}
           <dl className="grid grid-cols-2 gap-2 text-sm">
             <Row label="Protein" value={`${shown.protein} g`} />
             <Row label="Net carbs" value={`${Math.max(shown.carbs - shown.fiber, 0)} g`} />
@@ -197,7 +213,55 @@ export function ProfileForm({ defaults, saved, isNew, today }: {
         <section className="glass grid gap-4 p-4 sm:p-5 md:grid-cols-2" aria-labelledby="goal-h">
           <h2 id="goal-h" className="font-semibold md:col-span-2">Your goal</h2>
           {field("targetWeightKg", "Target weight", "kg")}
+          <div className="space-y-3 md:col-span-2">
+            <Controller control={control} name="calorieMode" render={({ field: f }) => (
+              <Segmented label="Daily calorie target" value={f.value} onChange={(m) => {
+                f.onChange(m); setValue("lowAck", false);
+                if (m === "custom" && !String(v.customKcal ?? "").trim() && recommended) setValue("customKcal", String(recommended.targetCalories));
+              }} options={[{ value: "recommended", label: "Recommended" }, { value: "custom", label: "I'll set my own" }]} />
+            )} />
+            {!customMode ? (
+              recommended && (
+                <p className="rounded-xl bg-inset p-3 text-sm">
+                  <b className="tabular-nums">{n0(recommended.targetCalories)} kcal a day</b> is recommended for you, based on your body,
+                  activity and the deficit below. Prefer a different number? Choose &ldquo;I&apos;ll set my own&rdquo;.
+                </p>
+              )
+            ) : (
+              <div className="space-y-2">
+                <label className="label" htmlFor="customKcal">Your daily calorie target</label>
+                <div className="relative">
+                  <input id="customKcal" type="number" inputMode="numeric" step="1" min={customMin} max={CUSTOM_KCAL.max}
+                    aria-invalid={!customOk} aria-describedby="customKcal-help" className="input !min-h-11 !pr-14"
+                    {...register("customKcal", { onChange: () => setValue("lowAck", false) })} />
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted" aria-hidden="true">kcal</span>
+                </div>
+                <p id="customKcal-help" className={customOk ? "text-sm text-muted" : "err !text-sm"} role={customOk ? undefined : "alert"}>
+                  {!customOk
+                    ? `Enter a whole number from ${n0(customMin)} to ${n0(CUSTOM_KCAL.max)} kcal.${recommended?.restrictedReason ? " Your health-check answers set the minimum at your maintenance calories." : ""}`
+                    : recommended && preview && preview.targetCalories !== recommended.targetCalories
+                      ? `That's ${n0(Math.abs(preview.targetCalories - recommended.targetCalories))} kcal ${preview.targetCalories < recommended.targetCalories ? "below" : "above"} the recommended ${n0(recommended.targetCalories)} kcal.`
+                      : "Same as the recommended target."}
+                </p>
+                {preview && customOk && !preview.belowFloor && preview.targetCalories >= preview.tdee && !recommended?.restrictedReason && (
+                  <p className="text-sm text-muted">This is at or above your maintenance (about {n0(preview.tdee)} kcal), so it won&apos;t lead to weight loss.</p>
+                )}
+                {needsAck && preview && (
+                  <div role="note" className="space-y-2 rounded-xl border border-warn bg-warn/10 p-3 text-sm">
+                    <p>
+                      <AlertTriangle className="mr-1 inline size-4 align-text-bottom text-warn" aria-hidden="true" />
+                      <b>{n0(preview.targetCalories)} kcal is below the {n0(preview.floor)} kcal</b> generally considered the lowest safe level
+                      for {v.sex === "male" ? "men" : "women"} without medical supervision. Eating this little can cause fatigue, muscle loss and nutrient gaps.
+                      Consider talking with a doctor or registered dietitian first.
+                    </p>
+                    <CheckField {...register("lowAck")}>I understand and want to use this target anyway</CheckField>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <div className="md:col-span-2">
+            {!customMode && (<>
             <Controller control={control} name="deficitPct" render={({ field: f }) => (
               <Segmented label="Calorie deficit" value={String(f.value)} onChange={(s) => f.onChange(Number(s))}
                 options={DEFICITS.map((d) => ({ value: String(d), label: pct(d) }))} />
@@ -205,6 +269,7 @@ export function ProfileForm({ defaults, saved, isNew, today }: {
             <p className={`mt-2 text-sm ${Number(v.deficitPct) >= 0.25 ? "font-medium text-warn" : "text-muted"}`}>
               {DEFICIT_NOTE[(DEFICITS.find((d) => d === Number(v.deficitPct)) ?? DEFAULT_DEFICIT)]}
             </p>
+            </>)}
             {projection && (
               <p className={`mt-2 rounded-xl p-3 text-sm ${projection.aggressive ? "bg-warn/15" : "bg-inset"}`}>
                 {projection.aggressive && <AlertTriangle className="mr-1 inline size-4 align-text-bottom text-warn" aria-hidden="true" />}
@@ -280,14 +345,14 @@ export function ProfileForm({ defaults, saved, isNew, today }: {
 
       <aside className="hidden lg:sticky lg:top-24 lg:block" aria-label="Targets summary">{summary}</aside>
 
-      {/* Mobile: sticky save bar above the bottom nav */}
-      <div className="fixed inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-3 rounded-2xl border border-line-strong bg-surface-2 px-4 py-2 shadow-xl lg:hidden">
+      {/* Mobile: sticky save bar above the bottom nav, only while there is something to save */}
+      {(dirty || isSubmitting) && <div className="fixed inset-x-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-3 rounded-2xl border border-line-strong bg-surface-2 px-4 py-2 shadow-xl lg:hidden">
         <div className="min-w-0 text-sm">
           <p className={`font-semibold ${dirty ? "text-warn" : ""}`}>{status}</p>
           {shown && <p className="truncate text-muted tabular-nums">{n0(shown.calories)} kcal · {shown.protein} g protein</p>}
         </div>
         {saveBtn()}
-      </div>
+      </div>}
     </div>
   );
 }

@@ -1,12 +1,10 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuth, getIsAdmin } from "@/lib/auth";
 import { setAdmin } from "@/app/actions/admin";
 
 export default async function Admin() {
-  const s = await createClient();
-  const { data: { user } } = await s.auth.getUser();
-  const { data: me } = await s.from("user_roles").select("role").eq("user_id", user!.id).eq("role", "admin").maybeSingle();
-  if (!me) redirect("/");
+  const { supabase: s } = await getAuth();
+  if (!(await getIsAdmin())) redirect("/");
 
   // eslint-disable-next-line react-hooks/purity -- async server component, runs once per request
   const since = new Date(Date.now() - 7 * 864e5).toISOString();

@@ -17,6 +17,11 @@ export const PROTEIN_PER_KG = { min: 1.6, max: 2.2, default: 2.0 } as const;
 export const FAT_PCT = { min: 0.2, max: 0.35, default: 0.25 } as const; // share of calories
 export const KCAL_PER_KG = 7700; // rule-of-thumb energy in 1 kg of body weight
 
+/** Hard limits for a user-entered calorie target; below the safety floor is allowed only with an acknowledgement. */
+export const CUSTOM_KCAL = { min: 800, max: 6000 } as const;
+/** Lowest daily intake generally considered safe without medical supervision. */
+export const calorieFloor = (sex: Sex) => (sex === "male" ? 1500 : 1200);
+
 export type Screening = {
   pregnantOrNursing: boolean; eatingDisorderRisk: boolean; medicalCondition: boolean;
 };
@@ -64,14 +69,24 @@ export function computeTargets(p: {
   proteinPerKg?: number;
   /** Fat as a share of calories (default 25%, allowed 20-35%). */
   fatPct?: number;
+  /**
+   * The user's own daily calorie target. Clamped to CUSTOM_KCAL, and never below maintenance when a health-check
+   * restriction applies (otherwise a custom number would sidestep the safeguard).
+   */
+  customCalories?: number;
 }) {
   const restrictedReason = deficitRestriction(p);
   const deficitPct = restrictedReason ? 0 : Math.min(p.deficitPct ?? DEFAULT_DEFICIT, MAX_DEFICIT);
   const b = bmr(p.weightKg, p.heightCm, p.age, p.sex);
   const tdee = b * ACTIVITY[p.activity];
-  const floor = p.sex === "male" ? 1500 : 1200; // safety floor
+  const floor = calorieFloor(p.sex); // safety floor
   // Never below the floor, but the floor itself never exceeds maintenance (that would be a surplus)
-  const calories = Math.round(Math.max(tdee * (1 - deficitPct), Math.min(floor, tdee)));
+  const recommended = Math.round(Math.max(tdee * (1 - deficitPct), Math.min(floor, tdee)));
+  const isCustom = p.customCalories !== undefined && Number.isFinite(p.customCalories);
+  const customMin = restrictedReason ? Math.round(tdee) : CUSTOM_KCAL.min;
+  const calories = isCustom
+    ? Math.min(Math.max(Math.round(p.customCalories!), customMin), CUSTOM_KCAL.max)
+    : recommended;
 
   const basis = proteinBasis(p.weightKg, p.heightCm);
   const perKg = Math.min(Math.max(p.proteinPerKg ?? PROTEIN_PER_KG.default, PROTEIN_PER_KG.min), PROTEIN_PER_KG.max);
@@ -85,9 +100,21 @@ export function computeTargets(p: {
   return {
     bmr: Math.round(b), tdee: Math.round(tdee), deficitPct, restrictedReason,
     proteinBasisKg: basis.kg, proteinBasisKind: basis.kind, proteinPerKg: perKg, fatPct: fatShare,
-    targetCalories: calories, targetProteinG: protein,
+    targetCalories: calories, recommendedCalories: recommended, isCustom, customMin, floor,
+    belowFloor: isCustom && calories < floor,
+    targetProteinG: protein,
     targetFiberG: fiber, targetCarbsG: carbs, targetFatG: fat,
   };
+}
+
+/**
+ * The plan a calorie target amounts to, measured against maintenance (TDEE): the real percentage, so it stays
+ * correct for custom targets and when the safety floor or a health-check restriction overrides the chosen deficit.
+ */
+export function planSummary(targetCalories: number, tdee: number, custom: boolean) {
+  const pct = tdee > 0 ? Math.round((1 - targetCalories / tdee) * 100) : 0;
+  const base = pct >= 1 ? `${pct}% deficit` : pct <= -1 ? `${-pct}% surplus` : "Maintenance";
+  return { pct, label: custom ? `Custom: ${base.toLowerCase()}` : `${base} plan` };
 }
 
 /**

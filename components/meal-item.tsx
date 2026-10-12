@@ -1,9 +1,11 @@
 "use client";
 import { useState, useTransition } from "react";
-import { Copy, Pencil, Trash2 } from "lucide-react";
+import { Copy, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { duplicateMeal, updateMeal } from "@/app/actions/meals";
 import { isPending as isTemp, useDay } from "@/components/day-context";
 import { useToast } from "@/components/toast";
+import { MacroLine } from "@/components/macro-line";
+import { RowMenu, rowMenuItem } from "@/components/ui/row-menu";
 import type { Meal } from "@/lib/day";
 
 const SLOTS = ["breakfast", "lunch", "dinner", "snack"] as const;
@@ -11,7 +13,6 @@ const FIELDS = [
   ["calories", "calories", "kcal"], ["protein", "protein_g", "Protein g"], ["fiber", "fiber_g", "Fiber g"],
   ["netCarbs", "net_carbs_g", "Net carbs g"], ["fat", "fat_g", "Fat g"],
 ] as const;
-const icon = "btn btn-ghost !h-11 !w-11 !p-0";
 
 export function MealItem({ meal: x }: { meal: Meal }) {
   const [editing, setEditing] = useState(false);
@@ -62,22 +63,27 @@ export function MealItem({ meal: x }: { meal: Meal }) {
         <span className="min-w-0">
           <span className="font-medium">{x.title}</span>
           {x.source?.startsWith("ai") && (
-            <span className="ml-2 rounded-full bg-warn/20 px-2 py-0.5 text-xs font-semibold uppercase">AI estimate</span>
+            <Sparkles role="img" aria-label="AI estimate" className="ml-1.5 inline size-3.5 align-[-2px] text-warn" />
           )}
-          <span className="block text-xs text-muted">
-            {x.consumed_time && `${x.consumed_time.slice(0, 5)} · `}
-            {x.calories.toLocaleString("en-US")} kcal · {x.protein_g}g P · {x.fiber_g}g F · {x.net_carbs_g}g NC · {x.fat_g}g fat
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted">
+            {x.consumed_time && <><span className="tabular-nums">{x.consumed_time.slice(0, 5)}</span><span aria-hidden="true">·</span></>}
+            <b className="whitespace-nowrap font-semibold tabular-nums text-fg">{Number(x.calories).toLocaleString("en-US")} kcal</b>
+            <span aria-hidden="true">·</span>
+            <MacroLine protein={Number(x.protein_g)} netCarbs={Number(x.net_carbs_g)} fat={Number(x.fat_g)} fiber={Number(x.fiber_g)} />
           </span>
         </span>
-        <span className="flex shrink-0">
-          <button className={icon} aria-label={`Edit ${x.title}`} disabled={temp} onClick={() => setEditing(true)}><Pencil className="size-4" /></button>
-          <button className={icon} aria-label={`Duplicate ${x.title} to today`} disabled={pending || temp}
-            onClick={() => run(() => duplicateMeal(x.id), () => toast({ message: "Copied to today." }))}>
-            <Copy className="size-4" />
+        <RowMenu label={`Actions for ${x.title}`}>
+          <button className={rowMenuItem} disabled={temp} onClick={() => setEditing(true)}>
+            <Pencil className="size-4" aria-hidden="true" />Edit
           </button>
-          <button className={icon} aria-label={`Delete ${x.title}`} disabled={pending || temp}
-            onClick={() => day?.remove(x)}><Trash2 className="size-4" /></button>
-        </span>
+          <button className={rowMenuItem} disabled={pending || temp}
+            onClick={() => run(() => duplicateMeal(x.id), () => toast({ message: "Copied to today." }))}>
+            <Copy className="size-4" aria-hidden="true" />Copy to today
+          </button>
+          <button className={`${rowMenuItem} text-danger hover:bg-danger-soft`} disabled={pending || temp} onClick={() => day?.remove(x)}>
+            <Trash2 className="size-4" aria-hidden="true" />Delete
+          </button>
+        </RowMenu>
       </div>
       {msg && <p className={msg.ok ? "text-xs text-emerald-600" : "err"} role="status">{msg.text}</p>}
     </li>

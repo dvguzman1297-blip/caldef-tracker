@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { addDays, dateLabel } from "@/lib/date";
 
 const step = "btn btn-ghost !h-11 !w-11 !p-0";
 
-/** Context banner: date navigation and the active plan live together. */
-export function DayHeader({ date, today, deficitPct }: { date: string; today: string; deficitPct: number }) {
+/** Context banner: date navigation. */
+export function DayHeader({ date, today }: { date: string; today: string }) {
   const isToday = date === today;
   return (
     <header className="glass flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-3">
@@ -25,10 +25,6 @@ export function DayHeader({ date, today, deficitPct }: { date: string; today: st
         )}
         {!isToday && <Link href="/" className="ml-1 text-sm font-medium text-accent-fg underline">Back to today</Link>}
       </div>
-      <Link href="/profile" className="pill hover:bg-line" aria-label={`${deficitPct > 0 ? `${Math.round(deficitPct * 100)}% deficit plan` : "Maintenance plan"}. Open profile to change it`}>
-        <Target className="size-3.5" aria-hidden="true" />
-        {deficitPct > 0 ? `${Math.round(deficitPct * 100)}% deficit plan` : "Maintenance plan"}
-      </Link>
     </header>
   );
 }

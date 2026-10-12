@@ -20,24 +20,26 @@ export async function proxy(req: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Verified locally against the cached signing keys (no Supabase round trip); expired tokens are still refreshed
+  const { data } = await supabase.auth.getClaims();
+  const uid = data?.claims.sub;
   const path = req.nextUrl.pathname;
   const isPublic = PUBLIC.some((p) => path.startsWith(p));
 
-  if (!user && !isPublic) {
+  if (!uid && !isPublic) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
     url.searchParams.set("next", path);
     return NextResponse.redirect(url);
   }
-  if (user && (path === "/login" || path === "/register")) {
+  if (uid && (path === "/login" || path === "/register")) {
     return NextResponse.redirect(new URL("/", req.url));
   }
-  if (user && path.startsWith("/admin")) {
-    const { data } = await supabase.from("user_roles").select("role")
-      .eq("user_id", user.id).eq("role", "admin").maybeSingle();
-    if (!data) return NextResponse.redirect(new URL("/", req.url));
+  if (uid && path.startsWith("/admin")) {
+    const { data: role } = await supabase.from("user_roles").select("role")
+      .eq("user_id", uid).eq("role", "admin").maybeSingle();
+    if (!role) return NextResponse.redirect(new URL("/", req.url));
   }
   return res;
 }

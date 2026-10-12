@@ -37,8 +37,8 @@ function CalorieHero({ value, target, isEmpty }: { value: number; target: number
   const stroke = over ? "var(--danger)" : "var(--accent)";
 
   return (
-    <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-8">
-      <svg width="176" height="176" viewBox="0 0 128 128" className="shrink-0" role="img"
+    <div className="flex items-center gap-4 sm:gap-8">
+      <svg viewBox="0 0 128 128" className="size-36 shrink-0 sm:size-44" role="img"
         aria-label={`${n(Math.abs(left))} kilocalories ${over ? "over" : "left"} of ${n(target)}`}>
         <circle cx="64" cy="64" r={r} fill="none" strokeWidth="10" stroke="var(--track)" />
         <motion.circle cx="64" cy="64" r={r} fill="none" strokeWidth="10" strokeLinecap="round"
@@ -48,12 +48,11 @@ function CalorieHero({ value, target, isEmpty }: { value: number; target: number
         <text x="64" y="64" textAnchor="middle" fontSize="28" fontWeight="700" fill="var(--fg)">{n(Math.abs(left))}</text>
         <text x="64" y="82" textAnchor="middle" fontSize="12" fill="var(--fg-muted)">{over ? "kcal over" : "kcal left"}</text>
       </svg>
-      <div className="w-full flex-1 text-center sm:text-left">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Calories remaining</p>
-        <p className="text-4xl font-bold tabular-nums sm:text-5xl" aria-live="polite" aria-atomic="true">
-          {n(Math.abs(left))}<span className="ml-1 text-base font-medium text-muted">{over ? "kcal over" : "kcal"}</span>
+      <div className="min-w-0 flex-1">
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          {n(Math.abs(left))} kilocalories {over ? "over" : "remaining"}
         </p>
-        <dl className="mt-3 grid grid-cols-3 gap-3">
+        <dl className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
           <Stat label="Eaten" value={n(value)} />
           <Stat label="Goal" value={n(target)} />
           <Stat label="Progress" value={`${Math.round(pct * 100)}%`} />
@@ -70,7 +69,7 @@ function CalorieHero({ value, target, isEmpty }: { value: number; target: number
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="flex items-baseline justify-between gap-2 sm:block">
       <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</dt>
       <dd className="text-lg font-bold tabular-nums">{value}</dd>
     </div>

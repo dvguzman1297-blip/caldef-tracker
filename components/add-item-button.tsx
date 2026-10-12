@@ -12,12 +12,12 @@ export function AddItemButton({ slot, date }: { slot: Slot; date: string }) {
   const close = () => ref.current?.close();
   return (
     <>
-      <button className="btn btn-ghost !px-3 !py-1.5 !text-xs" onClick={() => { setOpen(true); ref.current?.showModal(); }}
-        aria-label={`Add item to ${slot}`}>
-        <Plus className="size-3.5" aria-hidden="true" />Add item
+      <button className="btn btn-ghost !min-h-11 !px-3.5" onClick={() => { setOpen(true); ref.current?.showModal(); }}
+        aria-label={`Add food to ${slot}`}>
+        <Plus className="size-4" aria-hidden="true" />Add
       </button>
       {/* showModal() gives focus trapping, Esc to close and an inert background for free */}
-      <dialog ref={ref} className="sheet" onClose={() => setOpen(false)} aria-label={`Add item to ${slot}`}
+      <dialog ref={ref} className="sheet" onClose={() => setOpen(false)} aria-label={`Add food to ${slot}`}
         onClick={(e) => { if (e.target === ref.current) close(); }}>
         <div className="glass max-h-[90vh] overflow-y-auto p-4 shadow-2xl">
           <div className="flex items-center justify-between">

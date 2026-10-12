@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth";
 import { getDay } from "@/lib/day";
 import { addDays, dayOfMonth, formatDate, formatDay, parseDateParam, weekdayShort } from "@/lib/date";
 import {
@@ -16,7 +16,7 @@ type Range = (typeof RANGES)[number];
 
 const STATUS: Record<DayStatus, { label: string; cls: string }> = {
   no_data: { label: "No data", cls: "bg-surface-2" },
-  very_low: { label: "Incomplete log?", cls: "bg-warn/15" },
+  very_low: { label: "Low", cls: "bg-warn/15" },
   under: { label: "Below target", cls: "bg-surface-2" },
   on_target: { label: "On target", cls: "bg-accent-soft" },
   over: { label: "Over", cls: "bg-warn/15" },
@@ -37,18 +37,16 @@ export default async function History({ searchParams }: { searchParams: Promise<
     return `/history${s ? `?${s}` : ""}`;
   };
 
-  const s = await createClient();
-  const { data: { user } } = await s.auth.getUser();
-  const { meals, totals } = await getDay(s, user!.id, date);
-
+  const { supabase: s, uid } = await requireAuth();
   const mealFrom = addDays(today, -(Math.max(range, 28) - 1));
-  const [mealsRes, weightsRes, metricsRes] = await Promise.all([
+  const [{ meals, totals }, mealsRes, weightsRes, metricsRes] = await Promise.all([
+    getDay(s, uid, date),
     s.from("logged_meals").select("calories,protein_g,fiber_g,net_carbs_g,fat_g,daily_logs!inner(log_date)")
-      .eq("user_id", user!.id).is("deleted_at", null)
+      .eq("user_id", uid).is("deleted_at", null)
       .gte("daily_logs.log_date", mealFrom).lte("daily_logs.log_date", today),
-    s.from("weight_logs").select("id,log_date,weight_kg").eq("user_id", user!.id)
+    s.from("weight_logs").select("id,log_date,weight_kg").eq("user_id", uid)
       .gte("log_date", addDays(today, -89)).lte("log_date", today).order("log_date"),
-    s.from("health_metrics").select("target_calories").eq("user_id", user!.id).maybeSingle(),
+    s.from("health_metrics").select("target_calories").eq("user_id", uid).maybeSingle(),
   ]);
   for (const r of [mealsRes, weightsRes, metricsRes]) if (r.error) throw new Error(`Could not load progress: ${r.error.message}`);
   const target = metricsRes.data?.target_calories as number | undefined;
@@ -118,7 +116,7 @@ export default async function History({ searchParams }: { searchParams: Promise<
                   className={`flex min-h-24 flex-col justify-between rounded-lg p-1.5 ${st.cls} ${d === today ? "ring-2 ring-accent" : ""} ${d === date ? "outline outline-2 outline-offset-1 outline-current" : ""}`}>
                   <span className="text-muted">{weekdayShort(d)} {dayOfMonth(d)}</span>
                   <span className="text-sm font-semibold tabular-nums">{t ? Math.round(t.cal).toLocaleString("en-US") : "–"}</span>
-                  <span className="leading-tight">{st.label}</span>
+                  <span className="leading-tight">{t ? st.label : " "}</span>
                 </Link>
               </li>
             );
@@ -152,7 +150,7 @@ export default async function History({ searchParams }: { searchParams: Promise<
               {formatDate(date, today)}: <span className="tabular-nums">{Math.round(totals.calories).toLocaleString("en-US")} kcal</span>
               <span className="font-normal text-muted"> · {Math.round(totals.protein)}g protein · {Math.round(totals.fiber)}g fiber</span>
             </h2>
-            <Link href={`/?date=${date}`} className="btn btn-ghost !py-1.5">{dayStatusNow === "very_low" ? "Finish logging" : "Open day"}</Link>
+            <Link href={`/?date=${date}`} className="btn btn-ghost !py-1.5">{dayStatusNow === "very_low" && !week.includes(date) ? "Finish logging" : "Open day"}</Link>
           </div>
           <ul className="divide-y divide-line text-sm">
             {SLOTS.flatMap((slot) => meals.filter((m) => m.slot === slot)).map((m) => (
@@ -202,6 +200,14 @@ export default async function History({ searchParams }: { searchParams: Promise<
               <p className="text-sm text-muted">No weigh-ins in this range yet. Log one to start your trend.</p>
               <Link href="/#wkg" className="btn">Log weight</Link>
             </div>
+          </div>
+        ) : weights.length === 1 ? (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted">
+              <b className="text-lg text-fg tabular-nums">{weights[0].kg.toFixed(1)} kg</b> on {formatDate(weights[0].date, today)}.
+              Log one more weigh-in on a different day to see a trend.
+            </p>
+            <Link href="/#wkg" className="btn">Log weight</Link>
           </div>
         ) : (
           <>

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
@@ -21,7 +21,7 @@ const DESKTOP = [
 
 // Mobile bottom bar: two tabs, the centre "Log" button, two tabs. Meal Planning lives in the More menu.
 const TABS_LEFT = [
-  { href: "/", label: "Dashboard", short: "Dashboard", Icon: LayoutDashboard },
+  { href: "/", label: "Dashboard", short: "Home", Icon: LayoutDashboard },
   { href: "/recipes", label: "Recipes", short: "Recipes", Icon: ChefHat },
 ];
 const TABS_RIGHT = [
@@ -38,8 +38,6 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
   const reduce = useReducedMotion();
   const logDialog = useRef<HTMLDialogElement>(null);
   const [logMounted, setLogMounted] = useState(false);
-  const [hideTop, setHideTop] = useState(false);
-  const lastY = useRef(0);
 
   const desktop = isAdmin ? [...DESKTOP, { href: "/admin", label: "Admin", Icon: Shield }] : DESKTOP;
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
@@ -51,22 +49,14 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
     router.refresh();
   };
 
-  const openLog = () => { tick(); setLogMounted(true); logDialog.current?.showModal(); };
+  const openLog = () => {
+    tick();
+    // The dashboard already has the log form inline: jump to it rather than opening a duplicate sheet
+    const inline = path === "/" ? document.getElementById("describe-meal") : null;
+    if (inline) { inline.scrollIntoView({ behavior: "smooth", block: "center" }); (inline as HTMLInputElement).focus({ preventScroll: true }); return; }
+    setLogMounted(true); logDialog.current?.showModal();
+  };
   const closeLog = () => logDialog.current?.close();
-
-  // Hide the top bar when scrolling down, reveal on scroll up
-  useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY;
-      if (y <= 80) { setHideTop(false); lastY.current = y; return; }
-      const dy = y - lastY.current;
-      if (Math.abs(dy) < 8) return;
-      setHideTop(dy > 0);
-      lastY.current = y;
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   const linkClass = (active: boolean) =>
     `flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors ${
@@ -76,7 +66,7 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
     const active = isActive(href);
     return (
       <Link key={href} href={href} aria-label={label} aria-current={active ? "page" : undefined} onClick={tick}
-        className="flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-xs">
+        className="flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-xs focus-visible:outline-offset-[-3px]">
         <span className="relative grid h-7 w-14 place-items-center">
           {active && (
             <motion.span layoutId="mobile-tab" transition={spring} className="absolute inset-0 rounded-full bg-accent" />
@@ -119,14 +109,16 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
         </header>
       </div>
 
-      {/* Mobile top header: slides away on scroll down */}
-      <div className={`sticky top-0 z-10 bg-app/90 px-3 py-3 backdrop-blur transition-transform duration-300 md:hidden ${hideTop ? "-translate-y-full" : ""}`}>
-        <header className="glass mx-auto flex max-w-5xl items-center gap-2 px-3 py-2 shadow-sm">
+      {/* Mobile top header: fixed to the viewport (like the bottom bar) so overscroll and the browser toolbar never move it.
+          The spacer reserves the same height in the page flow. */}
+      <div aria-hidden="true" className="h-[calc(4.25rem+env(safe-area-inset-top))] md:hidden" />
+      <div className="fixed inset-x-0 top-0 z-10 flex h-[calc(4.25rem+env(safe-area-inset-top))] items-end bg-app px-3 pb-2 md:hidden">
+        <header className="glass mx-auto flex w-full max-w-5xl items-center gap-2 px-3 py-1 shadow-sm">
           <Link href="/" className="flex min-w-0 items-center gap-2" aria-label="CalDef home">
-            <Wordmark className="h-9 w-auto shrink-0 text-fg" />
+            <Wordmark className="h-8 w-auto shrink-0 text-fg" />
           </Link>
           <div className="ml-auto flex shrink-0 items-center gap-1">
-            <ThemeToggle className="!h-11 !w-11 !p-0" />
+            <ThemeToggle className="!h-10 !w-10 !p-0" />
             <AccountMenu label="More menu" onSignOut={signOut} trigger={<Menu className="size-5" strokeWidth={1.75} aria-hidden="true" />}>
               <Link href="/lanes" className={`${menuItemClass} ${isActive("/lanes") ? "font-semibold text-accent-fg" : ""}`}
                 aria-current={isActive("/lanes") ? "page" : undefined}>

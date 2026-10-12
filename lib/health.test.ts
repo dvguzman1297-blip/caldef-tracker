@@ -1,8 +1,51 @@
 import { describe, expect, it } from "vitest";
-import { computeTargets, healthyMaxKg, projectLoss, proteinBasis, type Screening } from "./health";
+import { computeTargets, healthyMaxKg, planSummary, projectLoss, proteinBasis, type Screening } from "./health";
 
 const none: Screening = { pregnantOrNursing: false, eatingDisorderRisk: false, medicalCondition: false };
 const base = { weightKg: 70, targetWeightKg: 62, heightCm: 165, age: 30, sex: "female" as const, activity: "moderate" as const, screening: none };
+
+describe("planSummary", () => {
+  it("reports the real deficit, surplus or maintenance", () => {
+    expect(planSummary(1800, 2400, false)).toEqual({ pct: 25, label: "25% deficit plan" });
+    expect(planSummary(2600, 2400, false).label).toBe("8% surplus plan");
+    expect(planSummary(2400, 2400, false).label).toBe("Maintenance plan");
+  });
+  it("labels custom targets", () => expect(planSummary(2000, 2400, true).label).toBe("Custom: 17% deficit"));
+});
+
+describe("custom calorie target", () => {
+  it("uses the custom value and rebuilds the macros from it", () => {
+    const rec = computeTargets(base);
+    const t = computeTargets({ ...base, customCalories: 2100 });
+    expect(t.isCustom).toBe(true);
+    expect(t.targetCalories).toBe(2100);
+    expect(t.recommendedCalories).toBe(rec.targetCalories);
+    expect(t.targetFatG).toBe(Math.round((2100 * 0.25) / 9));
+    expect(t.targetProteinG).toBe(rec.targetProteinG);
+  });
+  it("is not custom when none is given", () => {
+    const t = computeTargets(base);
+    expect(t.isCustom).toBe(false);
+    expect(t.targetCalories).toBe(t.recommendedCalories);
+  });
+  it("flags a target below the safety floor but still allows it", () => {
+    const t = computeTargets({ ...base, customCalories: 1000 });
+    expect(t.targetCalories).toBe(1000);
+    expect(t.belowFloor).toBe(true);
+    expect(computeTargets({ ...base, sex: "male", customCalories: 1400 }).belowFloor).toBe(true);
+    expect(computeTargets({ ...base, customCalories: 1200 }).belowFloor).toBe(false);
+  });
+  it("clamps to the hard limits", () => {
+    expect(computeTargets({ ...base, customCalories: 200 }).targetCalories).toBe(800);
+    expect(computeTargets({ ...base, customCalories: 99999 }).targetCalories).toBe(6000);
+  });
+  it("never lets a health-check restriction be undercut", () => {
+    const restricted = { ...base, screening: { ...none, eatingDisorderRisk: true } };
+    const t = computeTargets({ ...restricted, customCalories: 1200 });
+    expect(t.targetCalories).toBe(t.tdee);
+    expect(computeTargets({ ...restricted, customCalories: t.tdee + 300 }).targetCalories).toBe(t.tdee + 300);
+  });
+});
 
 describe("computeTargets", () => {
   it("defaults to a 20% deficit", () => {

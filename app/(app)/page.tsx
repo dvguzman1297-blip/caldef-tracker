@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth";
 import { getDay, targetsOf } from "@/lib/day";
 import { addDays, dateLabel, parseDateParam } from "@/lib/date";
 import { buildPicks, type PickRow, type QuickPick } from "@/lib/quick-picks";
@@ -17,9 +17,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const date = parseDateParam(q, today);
   const previousDate = addDays(date, -1);
 
-  const s = await createClient();
-  const { data: { user } } = await s.auth.getUser();
-  const uid = user!.id;
+  const { supabase: s, uid } = await requireAuth();
   const [metricsRes, day, previous, weightsRes, historyRes, foodsRes] = await Promise.all([
     s.from("health_metrics").select("*").eq("user_id", uid).maybeSingle(),
     getDay(s, uid, date),
@@ -52,8 +50,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const prev = w ? second : first;
 
   return (
-    <PageShell title="Dashboard" subtitle="Track today's calories and macros against your targets.">
-      <DayHeader date={date} today={today} deficitPct={m.deficit_pct} />
+    <PageShell title="Dashboard" compactOnMobile subtitle="Track today's calories and macros against your targets.">
+      <DayHeader date={date} today={today} />
       {firstRun && <OnboardingCard targetKcal={m.target_calories} />}
 
       <DayView date={date} meals={day.meals} targets={targetsOf(m)} recent={recent} frequent={frequent} favorites={favorites}

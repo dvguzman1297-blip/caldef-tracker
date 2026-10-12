@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { FAT_PCT, PROTEIN_PER_KG, computeTargets } from "@/lib/health";
+import { CUSTOM_KCAL, FAT_PCT, PROTEIN_PER_KG, computeTargets } from "@/lib/health";
 import { ALLERGEN_KEYS } from "@/lib/allergens";
 
 const ProfileSchema = z.object({
@@ -16,6 +16,10 @@ const ProfileSchema = z.object({
   // Macro split (optional; defaults apply when omitted)
   proteinPerKg: z.number().min(PROTEIN_PER_KG.min).max(PROTEIN_PER_KG.max).optional(),
   fatPct: z.number().min(FAT_PCT.min).max(FAT_PCT.max).optional(),
+  // The user's own calorie target; omitted means "use the recommended one"
+  customCalories: z.number().int().min(CUSTOM_KCAL.min).max(CUSTOM_KCAL.max).optional(),
+  // Required when customCalories is below the safety floor
+  acknowledgedLowTarget: z.boolean().optional(),
   dietaryPreferences: z.string().max(300),
   allergens: z.array(z.enum(ALLERGEN_KEYS as [string, ...string[]])).max(ALLERGEN_KEYS.length),
   // Answered on every save and deliberately not stored; only the resulting targets are.
@@ -36,12 +40,16 @@ export async function saveProfile(raw: z.input<typeof ProfileSchema>) {
   const t = computeTargets({
     weightKg: p.currentWeightKg, targetWeightKg: p.targetWeightKg, heightCm: p.heightCm,
     age: p.age, sex: p.sex, activity: p.activity, deficitPct: p.deficitPct,
-    proteinPerKg: p.proteinPerKg, fatPct: p.fatPct,
+    proteinPerKg: p.proteinPerKg, fatPct: p.fatPct, customCalories: p.customCalories,
     screening: {
       pregnantOrNursing: p.pregnantOrNursing, eatingDisorderRisk: p.eatingDisorderRisk,
       medicalCondition: p.medicalCondition,
     },
   });
+  if (t.isCustom && t.targetCalories !== p.customCalories)
+    throw new Error(`Your target can't be below ${t.customMin} kcal with your health-check answers.`);
+  if (t.belowFloor && !p.acknowledgedLowTarget)
+    throw new Error(`Targets below ${t.floor} kcal need you to confirm you understand the risks.`);
   // One transactional RPC (supabase/migrations/0002_atomic_profile.sql): profile and targets
   // commit together or not at all.
   const { error } = await supabase.rpc("save_profile_and_targets", {
@@ -50,6 +58,7 @@ export async function saveProfile(raw: z.input<typeof ProfileSchema>) {
     p_bmr: t.bmr, p_tdee: t.tdee, p_target_calories: t.targetCalories,
     p_target_protein_g: t.targetProteinG, p_target_fiber_g: t.targetFiberG,
     p_target_carbs_g: t.targetCarbsG, p_target_fat_g: t.targetFatG, p_deficit_pct: t.deficitPct,
+    p_is_custom_target: t.isCustom,
   });
   if (error) throw new Error(`Could not save profile: ${error.message}`);
   revalidatePath("/", "layout");
