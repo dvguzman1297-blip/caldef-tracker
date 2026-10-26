@@ -14,7 +14,7 @@ export const Meal = z.object({
 });
 
 /** Inserts one logged meal (creating the day's log if needed) and returns its id. */
-export async function insertMealRow(supabase: SupabaseClient, userId: string, raw: unknown) {
+export async function insertMealRow(supabase: SupabaseClient<any, "caldef", "caldef">, userId: string, raw: unknown) {
   const m = Meal.parse(raw);
   if (m.date && m.date > await getToday()) throw new Error("Can't log meals in the future");
   const user = { id: userId };

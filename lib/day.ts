@@ -7,7 +7,7 @@ export type Meal = {
   consumed_time: string | null; source: string | null;
 };
 
-export async function getDay(supabase: SupabaseClient, userId: string, date: string) {
+export async function getDay(supabase: SupabaseClient<any, "caldef", "caldef">, userId: string, date: string) {
   // One round trip: filter meals by the date of their parent log via an inner join
   const { data, error } = await supabase.from("logged_meals").select("*, daily_logs!inner(log_date)")
     .eq("user_id", userId).eq("daily_logs.log_date", date).is("deleted_at", null)

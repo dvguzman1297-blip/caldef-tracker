@@ -1,5 +1,4 @@
 "use server";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -12,5 +11,5 @@ export async function deleteAccount(confirmation: string) {
   const { error } = await createAdminClient().auth.admin.deleteUser(user.id);
   if (error) throw new Error(`Could not delete account: ${error.message}`);
   await supabase.auth.signOut();
-  redirect("/login");
+  return { ok: true as const };
 }

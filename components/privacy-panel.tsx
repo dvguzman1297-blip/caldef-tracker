@@ -27,8 +27,10 @@ export function PrivacyPanel() {
           <button className="btn !bg-danger !text-on-accent" disabled={text !== "DELETE" || pending}
             onClick={() => start(async () => {
               setErr("");
-              try { await deleteAccount(text); } catch (e: any) {
-                if (e?.digest?.startsWith?.("NEXT_REDIRECT")) throw e;
+              try {
+                await deleteAccount(text);
+                window.location.assign("/login");
+              } catch (e: any) {
                 setErr(e.message || "Could not delete account.");
               }
             })}>{pending ? "Deleting…" : "Delete account"}</button>
