@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC = ["/login", "/register", "/forgot-password", "/auth/callback"];
 
 export async function proxy(req: NextRequest) {
-    let res = NextResponse.next({ request: req });
+  let res = NextResponse.next({ request: req });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

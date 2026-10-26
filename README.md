@@ -1,38 +1,30 @@
 # CalDef Tracker
 
-## 1. Create the Next.js app (skip if you already have one)
-```bash
-npx create-next-app@latest caldef --typescript --tailwind --app --eslint --no-src-dir --import-alias "@/*"
-cd caldef
-```
-Use Next.js 15+ with Tailwind v4 (the current default). Files here use `@/…` imports from the project root.
+Calorie, macro and weight tracker with AI meal estimates and pantry recipes. Next.js (App Router) + Supabase + Groq.
 
-## 2. Paste these files
-Extract this zip into the project root and **overwrite** when asked. Then delete `app/page.tsx` (the default starter page) since the dashboard lives at `app/(app)/page.tsx`.
-
-## 3. Install dependencies
+## 1. Install
 ```bash
-npm i @supabase/supabase-js @supabase/ssr groq-sdk zod react-hook-form @hookform/resolvers framer-motion lucide-react next-themes
+npm install
 ```
 
-## 4. Supabase
-1. Run every file in `supabase/migrations/` in order (`0001`–`0004`) in the Supabase SQL editor.
-2. Auth > URL Configuration: set Site URL to `http://localhost:3000` and add `http://localhost:3000/auth/callback` to Redirect URLs.
-3. Copy `.env.example` to `.env.local` and fill in the project URL, anon key, and your Groq key.
-4. After registering, make yourself admin in the SQL editor:
-   `insert into user_roles (user_id, role) values ('<your-user-uuid>', 'admin');`
+## 2. Supabase
+1. Run every file in `supabase/migrations/` in order (`0001`–`0007`) in the Supabase SQL editor.
+2. Project Settings > API > Exposed schemas: add `caldef` (the app's tables live in that schema).
+3. Auth > URL Configuration: set Site URL to `http://localhost:3000` and add `http://localhost:3000/auth/callback` to Redirect URLs.
+4. Copy `.env.example` to `.env.local` and fill in the project URL, anon key, service role key and your Groq key.
+5. After registering, make yourself admin in the SQL editor:
+   `insert into caldef.user_roles (user_id, role) values ('<your-user-uuid>', 'admin');`
 
-## 5. Run
+## 3. Run
 ```bash
-npm run dev
+npm run dev        # http://localhost:3000
+npm run typecheck && npm run lint && npm test
 ```
-
-## 6. Deployment
-``` Vercel app deployment 9/30
 
 ## Notes
-- Route protection: `middleware.ts` (login redirect + `/admin` role check), each server action re-checks the user, and RLS is the real enforcement.
+- Route protection: `proxy.ts` (login redirect + `/admin` role check), each server action re-checks the user, and RLS is the real enforcement.
 - Targets are recomputed server-side in `app/actions/profile.ts` using `lib/health.ts`. Carbs are tracked as net carbs (net target = carbs target minus fiber target).
+- AI endpoints are capped per user per day (`AI_DAILY_LIMIT` in `lib/ai-quota.ts`, counted by migration 0007). If the counter can't be reached the call is allowed and the error is logged.
 - Account deletion needs `SUPABASE_SERVICE_ROLE_KEY` in the server environment (never expose it to the browser).
 - Set `APP_TIMEZONE` in `.env.local` to your IANA timezone so "today" rolls over at local midnight.
-- UI uses plain Tailwind classes (defined in `app/globals.css`), so no `shadcn init` is needed.
+- CI (`.github/workflows/ci.yml`) runs typecheck, lint and tests on every push and pull request.
