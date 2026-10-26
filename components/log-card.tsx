@@ -111,7 +111,7 @@ export function LogCard({ recent, frequent, favorites }: { recent: QuickPick[]; 
       )}
 
       {draft && (
-        <form className="space-y-3 rounded-xl border border-line-strong bg-inset p-3" onSubmit={(e) => { e.preventDefault(); save(); }}
+        <form className="space-y-3 rounded-xl bg-inset p-3" onSubmit={(e) => { e.preventDefault(); save(); }}
           aria-label="Review estimate">
           <p className="text-sm font-semibold">Check and edit before adding to {slot}</p>
           <div>
@@ -144,7 +144,7 @@ export function LogCard({ recent, frequent, favorites }: { recent: QuickPick[]; 
       {active && (
         <div className="border-t border-line pt-3">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted">Tap to log to {slot}</span>
+            <span className="eyebrow">Tap to log to {slot}</span>
             <div className="flex gap-1" role="group" aria-label="Quick pick lists">
               {tabs.map(([k]) => (
                 <button key={k} type="button" aria-pressed={active[0] === k} onClick={() => setTab(k)}
@@ -159,7 +159,7 @@ export function LogCard({ recent, frequent, favorites }: { recent: QuickPick[]; 
             {active[1].map((p) => (
               <li key={p.title} className="shrink-0 sm:min-w-0 sm:shrink">
                 <button type="button" onClick={() => relog(p)}
-                  className="chip min-h-11 w-full rounded-xl border border-line bg-inset px-3 py-1.5 text-left text-sm hover:border-accent hover:bg-surface-2">
+                  className="chip min-h-11 w-full rounded-xl border border-transparent bg-inset px-3 py-1.5 text-left text-sm hover:border-accent hover:bg-surface-2">
                   <span className="block max-w-48 truncate font-medium sm:max-w-none">{p.title}</span>
                   <span className="text-xs text-muted">{p.calories} kcal · {Math.round(p.protein)}g protein</span>
                 </button>

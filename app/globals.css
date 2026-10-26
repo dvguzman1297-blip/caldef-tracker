@@ -8,11 +8,12 @@
    Accent is reserved for primary CTAs, active nav and progress indicators.
    ------------------------------------------------------------------------- */
 :root {
-  --app-bg: #f4f7fb;
+  --app-bg: #eaf0f6;          /* a touch darker than the cards so white cards lift off it without borders */
   --surface: #ffffff;
   --surface-2: #eef2f7;       /* hover / elevated */
   --surface-inset: #f4f7fb;   /* inputs, table zebra */
   --border: #d5dce6;
+  --border-soft: transparent; /* card edge: light cards are separated by shadow, not a line */
   --border-strong: #7b8aa1;
 
   --fg: #0f172a;
@@ -24,23 +25,25 @@
   --on-accent: #ffffff;
   --accent-soft: #d1fae5;
   --accent-fg: #047857;       /* accent used as text/icon */
+  --accent-fill: #059669;     /* brighter accent for non-text fills (ring, bars): 3:1+ on card and track */
 
   --warn: #a94d07;
   --danger: #be123c;
   --danger-soft: #ffe4e6;
-  --track: #e2e8f0;           /* progress bar track */
+  --track: #e6ebf2;           /* progress bar track */
 
   /* Elevation: flat cards, raised hero, floating overlays */
-  --shadow-raised: 0 10px 30px -12px rgb(15 23 42 / .25);
+  --shadow-card: 0 1px 2px rgb(15 23 42 / .05), 0 6px 20px -10px rgb(15 23 42 / .14);
+  --shadow-raised: 0 12px 32px -14px rgb(15 23 42 / .28);
   --shadow-overlay: 0 20px 50px -12px rgb(15 23 42 / .35);
   --ring: #059669;
   --shadow-chip: 0 4px 12px -6px rgb(15 23 42 / .3);
 
   /* Macro identity colours: always paired with a text label, 3:1+ against surface and track */
-  --m-protein: #7c3aed;
-  --m-carbs: #0369a1;
-  --m-fat: #b45309;
-  --m-fiber: #047857;
+  --m-protein: #8b5cf6;
+  --m-carbs: #0284c7;
+  --m-fat: #c96a05;
+  --m-fiber: #0d9488;       /* teal, so fiber no longer reads as the app's accent green */
 }
 .dark {
   --app-bg: #0b0f19;
@@ -48,6 +51,7 @@
   --surface-2: #212942;
   --surface-inset: #0f1424;
   --border: #2a3350;
+  --border-soft: #ffffff0d;   /* hairline so cards read against the page without a hard outline */
   --border-strong: #6b7aa3;
 
   --fg: #e8ecf5;
@@ -59,11 +63,13 @@
   --on-accent: #04231a;
   --accent-soft: #10b98126;
   --accent-fg: #34d399;
+  --accent-fill: #10b981;
 
   --warn: #fbbf24;
   --danger: #fb7185;
   --danger-soft: #fb718522;
   --track: #2a3350;
+  --shadow-card: none;
   --shadow-raised: 0 10px 30px -12px rgb(0 0 0 / .6);
   --shadow-overlay: 0 20px 50px -12px rgb(0 0 0 / .7);
   --ring: #34d399;
@@ -72,7 +78,7 @@
   --m-protein: #a78bfa;
   --m-carbs: #38bdf8;
   --m-fat: #fbbf24;
-  --m-fiber: #34d399;
+  --m-fiber: #2dd4bf;
 }
 
 /* Expose tokens as Tailwind utilities: bg-surface, text-fg-muted, border-line, bg-accent ... */
@@ -112,13 +118,13 @@ body {
 
 /* Card surface (kept under the legacy `.glass` name so every page inherits it) */
 .glass {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 1rem;
+  background: var(--surface); border: 1px solid var(--border-soft); border-radius: 1rem; box-shadow: var(--shadow-card);
 }
 .card-elevated { background: var(--surface-2); }
 /* The one dominant card per page: accent edge + lift. Secondary cards stay flat (.glass). */
 .hero-card {
-  background: var(--surface); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
-  border-radius: 1.25rem; box-shadow: var(--shadow-raised);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--surface)), var(--surface) 55%);
+  border: 1px solid var(--border-soft); border-radius: 1.25rem; box-shadow: var(--shadow-raised);
 }
 
 .btn {
@@ -131,10 +137,11 @@ body {
 .btn:active { transform: scale(.98); }
 /* Disabled primary buttons read as clearly inactive (flat, neutral) instead of a washed-out accent */
 .btn:disabled { cursor: not-allowed; }
-.btn:disabled:not(.btn-ghost) { background: var(--surface-2); color: var(--fg-subtle); box-shadow: inset 0 0 0 1px var(--border); transform: none; }
+.btn:disabled:not(.btn-ghost) { background: var(--surface-inset); color: var(--fg-subtle); transform: none; }
 .btn-ghost:disabled { opacity: .5; }
-.btn-ghost { background: transparent; color: var(--fg); border: 1px solid var(--border-strong); }
-.btn-ghost:hover { background: var(--surface-2); }
+/* Secondary buttons are a tinted fill with a label, not an outline */
+.btn-ghost { background: var(--surface-2); color: var(--fg); border: 1px solid transparent; }
+.btn-ghost:hover { background: var(--border); }
 
 .input {
   width: 100%; padding: .55rem .75rem; border-radius: .75rem; font-size: .9rem;
@@ -144,6 +151,8 @@ body {
 .input:focus-visible, .btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 /* Every interactive element gets a visible keyboard focus ring */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+/* Small uppercase caption (stat names, list headings): the one style for these everywhere */
+.eyebrow { font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-muted); }
 .label { display: block; font-size: .8rem; font-weight: 500; margin-bottom: .25rem; color: var(--fg-muted); }
 .err { color: var(--danger); font-size: .78rem; margin-top: .2rem; }
 

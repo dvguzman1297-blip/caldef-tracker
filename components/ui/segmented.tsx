@@ -14,12 +14,12 @@ export function Segmented<T extends string>({ label, value, onChange, options, c
   return (
     <fieldset className={className}>
       <legend className="label">{label}</legend>
-      <div className="grid auto-cols-fr grid-flow-col gap-1 rounded-xl border border-line-strong bg-inset p-1">
+      <div className="grid auto-cols-fr grid-flow-col gap-1 rounded-xl bg-surface-2 p-1">
         {options.map((o) => (
           <label key={o.value} className="relative cursor-pointer">
             <input type="radio" name={name} value={o.value} checked={value === o.value}
               onChange={() => onChange(o.value)} className="peer sr-only" />
-            <span className="flex min-h-11 items-center justify-center rounded-lg px-2 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-2 peer-checked:bg-accent peer-checked:font-semibold peer-checked:text-on-accent peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ring)]">
+            <span className="flex min-h-11 items-center justify-center rounded-lg px-2 text-sm font-medium text-fg-muted transition-colors hover:bg-line peer-checked:bg-surface peer-checked:font-semibold peer-checked:text-accent-fg peer-checked:shadow-sm peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--ring)]">
               {o.label}
             </span>
           </label>

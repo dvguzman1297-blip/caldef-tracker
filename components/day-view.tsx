@@ -12,7 +12,7 @@ import { AddItemButton } from "@/components/add-item-button";
 import { DayProvider, useDay } from "@/components/day-context";
 import { LogCard } from "@/components/log-card";
 import { MacroLine } from "@/components/macro-line";
-import { MacroSummary } from "@/components/macro-summary";
+import { MacroSummary, type WeightSummary } from "@/components/macro-summary";
 import { MealItem } from "@/components/meal-item";
 import { QuickFab } from "@/components/quick-fab";
 
@@ -22,8 +22,14 @@ type Props = {
   recent: QuickPick[]; frequent: QuickPick[]; favorites: QuickPick[];
   /** The previous day's meals, for "Copy yesterday's lunch". */
   previousDate: string; previousMeals: Meal[];
-  /** Extra cards for the right-hand column on desktop (shown last on mobile), e.g. weight. */
+  /** Card beside the meals on desktop (after them on phones), e.g. fasting. */
   rail?: ReactNode;
+  /** Extra card after everything else (it should hide itself on desktop, or it adds an empty row), e.g. weight on phones. */
+  belowMeals?: ReactNode;
+  /** Weight form for the quick-action menu's "Log weight" dialog (desktop). */
+  weightDialog?: ReactNode;
+  /** Latest weigh-in, shown as a line in the hero. */
+  weightSummary?: WeightSummary;
 };
 
 /** Everything on the dashboard that reacts to logging: hero, log card, meal cards. */
@@ -35,16 +41,18 @@ export function DayView(props: Props) {
   );
 }
 
-function Inner({ targets: t, recent, frequent, favorites, previousDate, previousMeals, rail }: Props) {
+function Inner({ targets: t, recent, frequent, favorites, previousDate, previousMeals, rail, belowMeals, weightDialog, weightSummary }: Props) {
   const { meals, date } = useDay()!;
   const totals = sumMeals(meals);
-  // Mobile: one stack in the order hero, log, meals, rail. lg+: a main column (hero, meals) beside a rail (log, rail).
-  // The two column wrappers use `contents` below lg so their children join the outer stack and `order` sets the sequence.
+  // One shared grid so cards in the same row stretch to equal heights (no ragged columns when meals grow or the
+  // fasting card changes size). Source order is the phone order: hero, log, meals, fasting, weight.
+  // lg+: row 1 = hero | log, row 2 = meals | fasting. `cell` makes a card fill its grid cell.
+  const cell = "flex flex-col [&>*]:flex-1";
   return (
-    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:items-start">
-      <div className="contents lg:col-span-7 lg:flex lg:flex-col lg:gap-6 xl:col-span-8">
-        <div className="order-1">
-          <MacroSummary isEmpty={meals.length === 0} calories={{ value: totals.calories, target: t.calories }}
+    <>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className={`${cell} lg:col-span-7 xl:col-span-8`}>
+          <MacroSummary isEmpty={meals.length === 0} weight={weightSummary} calories={{ value: totals.calories, target: t.calories }}
             macros={[
               { id: "protein", label: "Protein", value: totals.protein, target: t.protein },
               { id: "carbs", label: "Net carbs", value: totals.netCarbs, target: t.netCarbs, overIsBad: true },
@@ -52,19 +60,20 @@ function Inner({ targets: t, recent, frequent, favorites, previousDate, previous
               { id: "fiber", label: "Fiber", value: totals.fiber, target: t.fiber },
             ]} />
         </div>
-        <section className="order-3 grid items-start gap-3 md:grid-cols-2" aria-label="Meals">
+        <div className={`${cell} lg:col-span-5 xl:col-span-4`}>
+          <LogCard recent={recent} frequent={frequent} favorites={favorites} />
+        </div>
+        <section className="grid gap-4 md:grid-cols-2 lg:col-span-7 xl:col-span-8" aria-label="Meals">
           {SLOTS.map((slot) => (
             <MealCard key={slot} slot={slot} items={meals.filter((x) => x.slot === slot)}
               date={date} previousDate={previousDate} previous={previousMeals.filter((x) => x.slot === slot)} />
           ))}
         </section>
+        {rail && <div className={`${cell} lg:col-span-5 xl:col-span-4`}>{rail}</div>}
+        {belowMeals}
       </div>
-      <div className="contents lg:col-span-5 lg:flex lg:flex-col lg:gap-6 xl:col-span-4">
-        <div className="order-2"><LogCard recent={recent} frequent={frequent} favorites={favorites} /></div>
-        {rail && <div className="order-4">{rail}</div>}
-      </div>
-      <QuickFab date={date} />
-    </div>
+      <QuickFab date={date} weight={weightDialog} />
+    </>
   );
 }
 
@@ -122,9 +131,12 @@ function MealCard({ slot, items, date, previousDate, previous }: {
             <h3 className="font-semibold leading-tight">
               <span className="capitalize">{slot}</span> <span className="ml-1 text-sm font-normal text-muted tabular-nums">{kcal.toLocaleString("en-US")} kcal</span>
             </h3>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
-              <MacroLine short protein={sum.protein} netCarbs={sum.netCarbs} fat={sum.fat} />
-            </p>
+            {/* A single item already shows its own macros below; the slot total is only new information with 2+ */}
+            {items.length > 1 && (
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+                <MacroLine short protein={sum.protein} netCarbs={sum.netCarbs} fat={sum.fat} />
+              </p>
+            )}
           </div>
         </div>
         <AddItemButton slot={slot} date={date} />

@@ -1,26 +1,44 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChefHat, Plus, UtensilsCrossed, X } from "lucide-react";
+import { ChefHat, Plus, Scale, UtensilsCrossed, X } from "lucide-react";
 import { AddMealForm } from "./add-meal-form";
+import { WEIGHT_SAVED } from "./weight-form";
 
 const EVENT = "caldef:log-meal";
 
 /** Opens the dashboard's log-meal modal from anywhere (e.g. the empty-state CTA). */
 export const openLogMeal = () => window.dispatchEvent(new Event(EVENT));
 
+const WEIGHT_EVENT = "caldef:log-weight";
+/** Opens the log-weight dialog from anywhere (e.g. the weight line in the hero). */
+export const openLogWeight = () => window.dispatchEvent(new Event(WEIGHT_EVENT));
+
 /**
  * Desktop floating "+" (mobile has the centre button in the bottom nav) plus the
  * log-meal modal it opens. The modal is mounted on all sizes so other CTAs can use it.
  */
-export function QuickFab({ date }: { date: string }) {
+export function QuickFab({ date, weight }: { date: string; weight?: ReactNode }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const weightDialog = useRef<HTMLDialogElement>(null);
+  const [weightOpen, setWeightOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState(false);
   const [open, setOpen] = useState(false); // mount the form lazily
 
   const showLog = () => { setMenu(false); setOpen(true); dialog.current?.showModal(); };
   const close = () => dialog.current?.close();
+  const showWeight = () => { setMenu(false); setWeightOpen(true); weightDialog.current?.showModal(); };
+  const closeWeight = () => weightDialog.current?.close();
+
+  useEffect(() => {
+    window.addEventListener(WEIGHT_SAVED, closeWeight);
+    window.addEventListener(WEIGHT_EVENT, showWeight);
+    return () => {
+      window.removeEventListener(WEIGHT_SAVED, closeWeight);
+      window.removeEventListener(WEIGHT_EVENT, showWeight);
+    };
+  }, []);
 
   useEffect(() => {
     window.addEventListener(EVENT, showLog);
@@ -48,6 +66,11 @@ export function QuickFab({ date }: { date: string }) {
             <button className={item} onClick={showLog}>
               <UtensilsCrossed className="size-4" aria-hidden="true" />Log meal
             </button>
+            {weight && (
+              <button className={`${item} !bg-surface-2 !text-fg hover:!bg-line`} onClick={showWeight}>
+                <Scale className="size-4" aria-hidden="true" />Log weight
+              </button>
+            )}
           </div>
         )}
         <button aria-label={menu ? "Close quick actions" : "Quick actions"} aria-expanded={menu}
@@ -69,6 +92,21 @@ export function QuickFab({ date }: { date: string }) {
           {open && <AddMealForm date={date} onDone={close} />}
         </div>
       </dialog>
+
+      {weight && (
+        <dialog ref={weightDialog} className="sheet" aria-label="Log weight" onClose={() => setWeightOpen(false)}
+          onClick={(e) => { if (e.target === weightDialog.current) closeWeight(); }}>
+          <div className="glass max-h-[90vh] overflow-y-auto p-4 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-bold">Log weight</h2>
+              <button className="btn btn-ghost !h-11 !w-11 !p-0" aria-label="Close" onClick={closeWeight}>
+                <X className="size-5" aria-hidden="true" />
+              </button>
+            </div>
+            {weightOpen && weight}
+          </div>
+        </dialog>
+      )}
     </>
   );
 }

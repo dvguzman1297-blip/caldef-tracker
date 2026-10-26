@@ -38,6 +38,9 @@ describe.each(Object.entries(themes))("%s theme contrast", (_name, t) => {
     expect(contrast(parseHex(t.danger), soft("danger-soft"))).toBeGreaterThanOrEqual(4.5);
     // Accent-coloured text/icons on the soft accent fill (meal slot icon tiles)
     expect(contrast(parseHex(t["accent-fg"]), soft("accent-soft"))).toBeGreaterThanOrEqual(4.5);
+    // Selected chips: accent text on the soft fill sitting on the segmented track (surface-2)
+    const onTrack = over(parseHex(t["accent-soft"]), parseHex(t["surface-2"]));
+    expect(contrast(parseHex(t["accent-fg"]), onTrack)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("form control borders and focus ring are at least 3:1 (WCAG 1.4.11)", () => {
@@ -48,7 +51,7 @@ describe.each(Object.entries(themes))("%s theme contrast", (_name, t) => {
   });
 
   it("progress fills are at least 3:1 against their track and the card", () => {
-    for (const fg of ["accent", "m-protein", "m-carbs", "m-fat", "m-fiber", "danger"]) {
+    for (const fg of ["accent", "accent-fill", "m-protein", "m-carbs", "m-fat", "m-fiber", "danger"]) {
       expect(c(t, fg, "track"), `${fg} on track`).toBeGreaterThanOrEqual(3);
       expect(c(t, fg, "surface"), `${fg} on surface`).toBeGreaterThanOrEqual(3);
     }

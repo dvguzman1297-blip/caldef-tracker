@@ -60,7 +60,7 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
 
   const linkClass = (active: boolean) =>
     `flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors ${
-      active ? "bg-accent font-semibold text-on-accent shadow-sm" : "text-fg-muted hover:bg-surface-2 hover:text-fg"}`;
+      active ? "bg-accent-soft font-semibold text-accent-fg" : "text-fg-muted hover:bg-surface-2 hover:text-fg"}`;
 
   const tab = ({ href, short, label, Icon }: (typeof TABS_LEFT)[number]) => {
     const active = isActive(href);
@@ -69,9 +69,9 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
         className="flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-xs focus-visible:outline-offset-[-3px]">
         <span className="relative grid h-7 w-14 place-items-center">
           {active && (
-            <motion.span layoutId="mobile-tab" transition={spring} className="absolute inset-0 rounded-full bg-accent" />
+            <motion.span layoutId="mobile-tab" transition={spring} className="absolute inset-0 rounded-full bg-accent-soft" />
           )}
-          <motion.span className={`relative ${active ? "text-on-accent" : "text-fg-muted"}`}
+          <motion.span className={`relative ${active ? "text-accent-fg" : "text-fg-muted"}`}
             animate={{ scale: active ? 1.12 : 1 }} transition={spring}>
             <Icon className="size-5" strokeWidth={1.75} aria-hidden="true" />
           </motion.span>

@@ -1,8 +1,8 @@
 "use client";
 import { motion, useReducedMotion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, Scale } from "lucide-react";
 import { InfoTip } from "@/components/ui/info-tip";
-import { openLogMeal } from "./quick-fab";
+import { openLogMeal, openLogWeight } from "./quick-fab";
 
 const n = (v: number) => Math.round(v).toLocaleString("en-US");
 
@@ -14,16 +14,19 @@ export type MacroStat = {
 
 const COLOR = { protein: "var(--m-protein)", carbs: "var(--m-carbs)", fat: "var(--m-fat)", fiber: "var(--m-fiber)" } as const;
 
-type Props = { calories: { value: number; target: number }; macros: MacroStat[]; isEmpty: boolean };
+/** The latest weigh-in for the hero line; `kg` is null before the first one. */
+export type WeightSummary = { kg: number | null; detail: string | null };
+
+type Props = { calories: { value: number; target: number }; macros: MacroStat[]; isEmpty: boolean; weight?: WeightSummary };
 
 /**
  * Hero calorie gauge (remaining is the headline number) with per-macro progress bars.
  * Phones: gauge, then a two-column bar grid. md and up: gauge and stats on the left, bars stacked beside them.
  */
-export function MacroSummary({ calories, macros, isEmpty }: Props) {
+export function MacroSummary({ calories, macros, isEmpty, weight }: Props) {
   return (
     <section className="hero-card grid gap-5 p-4 sm:p-6 md:grid-cols-[auto_minmax(0,1fr)] md:items-center md:gap-x-10" aria-label="Daily nutrition summary">
-      <CalorieHero {...calories} isEmpty={isEmpty} />
+      <CalorieHero {...calories} isEmpty={isEmpty} weight={weight} />
       <ul className="grid gap-x-8 gap-y-4 border-t border-line pt-5 sm:grid-cols-2 md:grid-cols-1 md:gap-y-5 md:border-t-0 md:pt-0">
         {macros.map((m) => <MacroBar key={m.id} {...m} />)}
       </ul>
@@ -31,13 +34,13 @@ export function MacroSummary({ calories, macros, isEmpty }: Props) {
   );
 }
 
-function CalorieHero({ value, target, isEmpty }: { value: number; target: number; isEmpty: boolean }) {
+function CalorieHero({ value, target, isEmpty, weight }: { value: number; target: number; isEmpty: boolean; weight?: WeightSummary }) {
   const reduce = useReducedMotion();
   const r = 52, c = 2 * Math.PI * r;
   const pct = target > 0 ? value / target : 0;
   const left = Math.round(target - value);
   const over = left < 0;
-  const stroke = over ? "var(--danger)" : "var(--accent)";
+  const stroke = over ? "var(--danger)" : "var(--accent-fill)";
 
   return (
     <div className="flex items-center gap-4 sm:gap-8 md:flex-col md:gap-4">
@@ -60,6 +63,16 @@ function CalorieHero({ value, target, isEmpty }: { value: number; target: number
           <Stat label="Goal" value={n(target)} />
           <Stat label="Progress" value={`${Math.round(pct * 100)}%`} />
         </dl>
+        {weight && (
+          <button type="button" onClick={openLogWeight}
+            className="mt-3 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-sm text-muted hover:bg-surface-2 hover:text-fg md:mx-auto md:flex"
+            aria-label={weight.kg === null ? "Log your weight" : `Weight ${weight.kg.toFixed(1)} kilograms${weight.detail ? `, ${weight.detail}` : ""}. Log weight`}>
+            <Scale className="size-4" aria-hidden="true" />
+            {weight.kg === null ? <span>Log your weight</span> : (
+              <span><b className="tabular-nums text-fg">{weight.kg.toFixed(1)} kg</b>{weight.detail && <> · {weight.detail}</>}</span>
+            )}
+          </button>
+        )}
         {isEmpty && (
           <button className="btn mt-4 w-full sm:w-auto md:w-full" onClick={openLogMeal}>
             <Plus className="size-4" aria-hidden="true" />Log your first meal
@@ -73,7 +86,7 @@ function CalorieHero({ value, target, isEmpty }: { value: number; target: number
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-2 sm:block">
-      <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</dt>
+      <dt className="eyebrow">{label}</dt>
       <dd className="text-lg font-bold tabular-nums">{value}</dd>
     </div>
   );

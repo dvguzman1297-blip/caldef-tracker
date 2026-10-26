@@ -1,10 +1,13 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { deleteWeight, logWeight } from "@/app/actions/weight";
 import { unwrap } from "@/lib/action-result";
 import { formatDay } from "@/lib/date";
 import { formatChange, parseWeight, weightChange } from "@/lib/weight";
 import { useToast } from "@/components/toast";
+
+/** Fired after a weight is saved, so a dialog hosting this form can close itself. */
+export const WEIGHT_SAVED = "caldef:weight-saved";
 
 type Props = {
   date: string; today: string; label: string;
@@ -18,6 +21,8 @@ export function WeightForm({ date, today, label, current, previous }: Props) {
   const toast = useToast();
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
+  const uid = useId(); // this form can be on the page and in the quick-action dialog at once
+  const inputId = `wkg-${uid}`, errId = `wkg-err-${uid}`;
 
   const ref = current ?? previous;
   const delta = current && previous ? weightChange(previous.kg, current.kg) : null;
@@ -27,7 +32,7 @@ export function WeightForm({ date, today, label, current, previous }: Props) {
     if (!parsed.ok) { setError(parsed.error); return; }
     setError("");
     start(async () => {
-      try { await unwrap(logWeight({ date, kg: parsed.kg })); toast({ message: `Saved ${parsed.kg} kg for ${label}.` }); }
+      try { await unwrap(logWeight({ date, kg: parsed.kg })); toast({ message: `Saved ${parsed.kg} kg for ${label}.` }); window.dispatchEvent(new Event(WEIGHT_SAVED)); }
       catch (e) { setError(e instanceof Error ? e.message : "Could not save."); }
     });
   }
@@ -49,15 +54,15 @@ export function WeightForm({ date, today, label, current, previous }: Props) {
 
       <form action={submit} className="flex flex-wrap items-start gap-2" noValidate>
         <div>
-          <label className="sr-only" htmlFor="wkg">Weight on {label} in kilograms</label>
+          <label className="sr-only" htmlFor={inputId}>Weight on {label} in kilograms</label>
           <div className="relative">
-            <input id="wkg" name="kg" inputMode="decimal" autoComplete="off" placeholder="124.5"
+            <input id={inputId} name="kg" inputMode="decimal" autoComplete="off" placeholder="124.5"
               defaultValue={current?.kg} key={`${date}-${current?.kg ?? ""}`}
-              aria-invalid={!!error} aria-describedby={error ? "wkg-err" : undefined}
+              aria-invalid={!!error} aria-describedby={error ? errId : undefined}
               className="input !w-36 !pr-10" />
             <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted" aria-hidden="true">kg</span>
           </div>
-          {error && <p id="wkg-err" className="err" role="alert">{error}</p>}
+          {error && <p id={errId} className="err" role="alert">{error}</p>}
         </div>
         <button className="btn" disabled={pending}>{pending ? "Saving…" : current ? "Update" : "Log weight"}</button>
         {current && (

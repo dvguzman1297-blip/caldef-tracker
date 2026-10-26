@@ -145,7 +145,7 @@ export function AddMealForm({ onDone, date, slot }: {
         </div>
       )}
 
-      <form ref={formRef} action={submit} className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <form ref={formRef} action={submit} className="mt-3 grid grid-cols-2 items-end gap-3 md:grid-cols-4">
         {date && <input type="hidden" name="date" value={date} />}
         <input type="hidden" name="source" value={aiFilled ? "ai_estimate" : "manual"} />
         <div>
@@ -165,7 +165,7 @@ export function AddMealForm({ onDone, date, slot }: {
           </div>
         ))}
         <div>
-          <label className="label" htmlFor="am-time">Time eaten (optional)</label>
+          <label className="label" htmlFor="am-time">Time <span className="font-normal text-subtle">(optional)</span></label>
           <input id="am-time" name="consumedTime" type="time" className="input !min-h-11" />
         </div>
         {aiFilled && (
@@ -177,10 +177,13 @@ export function AddMealForm({ onDone, date, slot }: {
             </span>
           </label>
         )}
-        <button className="btn" disabled={adding || (aiFilled && !reviewed)}>
-          <Plus className="size-4" />{adding ? "Adding…" : "Add meal"}
-        </button>
-        <button type="button" className="btn btn-ghost" onClick={saveCurrent}>Save as food</button>
+        {/* One action row: on desktop it fills the last two columns beside the final inputs, at input height */}
+        <div className="col-span-2 flex items-end gap-2 md:col-start-3">
+          <button className="btn !min-h-11 flex-1" disabled={adding || (aiFilled && !reviewed)}>
+            <Plus className="size-4" />{adding ? "Adding…" : "Add meal"}
+          </button>
+          <button type="button" className="btn btn-ghost !min-h-11 flex-1" onClick={saveCurrent}>Save as food</button>
+        </div>
       </form>
     </>
   );
