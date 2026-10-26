@@ -117,13 +117,16 @@ body {
 }
 
 /* Card surface (kept under the legacy `.glass` name so every page inherits it) */
+/* Every card: a faint accent tint at the top fading into the plain surface by mid-height (checked in theme-contrast.test.ts) */
+.glass, .hero-card {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--surface)), var(--surface) 55%);
+}
 .glass {
-  background: var(--surface); border: 1px solid var(--border-soft); border-radius: 1rem; box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-soft); border-radius: 1rem; box-shadow: var(--shadow-card);
 }
 .card-elevated { background: var(--surface-2); }
-/* The one dominant card per page: accent edge + lift. Secondary cards stay flat (.glass). */
+/* The one dominant card per page: same tint as .glass, but with a larger raised shadow and bigger radius. */
 .hero-card {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, var(--surface)), var(--surface) 55%);
   border: 1px solid var(--border-soft); border-radius: 1.25rem; box-shadow: var(--shadow-raised);
 }
 
@@ -186,6 +189,10 @@ dialog.sheet-bottom {
 /* A newly logged item eases in rather than popping; also what the optimistic row does while saving */
 @keyframes item-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .item-in { animation: item-in .18s ease-out; }
+
+/* Quick-action menu items rise in; each sets its own animation-delay so they cascade */
+@keyframes fab-item-in { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+.fab-item { animation: fab-item-in .16s ease-out both; }
 
 /* Tappable chips (quick picks): lift slightly on hover, press in on tap */
 .chip { transition: transform .15s, border-color .15s, background-color .15s, box-shadow .15s; }

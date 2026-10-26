@@ -31,6 +31,21 @@ export function QuickFab({ date, weight }: { date: string; weight?: ReactNode })
   const showWeight = () => { setMenu(false); setWeightOpen(true); weightDialog.current?.showModal(); };
   const closeWeight = () => weightDialog.current?.close();
 
+  // Installed-app shortcuts open the dashboard as /?action=log-meal | log-weight | fasting
+  useEffect(() => {
+    const action = new URLSearchParams(window.location.search).get("action");
+    if (!action) return;
+    const t = setTimeout(() => {
+      if (action === "log-meal") window.dispatchEvent(new Event(EVENT));
+      else if (action === "log-weight") window.dispatchEvent(new Event(WEIGHT_EVENT));
+      else if (action === "fasting") document.getElementById("fasting")?.scrollIntoView({ block: "center" });
+      const url = new URL(window.location.href);
+      url.searchParams.delete("action");
+      window.history.replaceState(null, "", url);
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     window.addEventListener(WEIGHT_SAVED, closeWeight);
     window.addEventListener(WEIGHT_EVENT, showWeight);
@@ -54,29 +69,37 @@ export function QuickFab({ date, weight }: { date: string; weight?: ReactNode })
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("pointerdown", onDown); };
   }, [menu]);
 
-  const item = "btn !justify-start !px-4 !py-2.5 shadow-lg";
+  // Equal-width rows so the left edges line up; the soft ones are secondary, the green one is the main action
+  const item = "fab-item btn !w-52 !justify-start !gap-3 !px-4 !py-2.5 shadow-lg";
+  const soft = "!bg-surface-2 !text-fg hover:!bg-line";
   return (
     <>
       <div ref={root} className="fixed bottom-6 right-6 z-20 hidden flex-col items-end gap-2 md:flex">
         {menu && (
-          <div id="quick-fab-menu" className="flex flex-col items-end gap-2">
-            <Link href="/recipes" className={`${item} !bg-surface-2 !text-fg hover:!bg-line`}>
-              <ChefHat className="size-4" aria-hidden="true" />Generate recipe
-            </Link>
-            <button className={item} onClick={showLog}>
-              <UtensilsCrossed className="size-4" aria-hidden="true" />Log meal
-            </button>
-            {weight && (
-              <button className={`${item} !bg-surface-2 !text-fg hover:!bg-line`} onClick={showWeight}>
-                <Scale className="size-4" aria-hidden="true" />Log weight
+          <>
+            {/* Dims the page so the menu stands out; clicking it closes the menu */}
+            <div className="fixed inset-0 -z-10 bg-black/30" aria-hidden="true" onClick={() => setMenu(false)} />
+            {/* Most-used action sits closest to the button; items rise in one after another, nearest first */}
+            <div id="quick-fab-menu" className="flex flex-col items-end gap-2">
+              <Link href="/recipes" className={`${item} ${soft}`} style={{ animationDelay: "80ms" }}>
+                <ChefHat className="size-4 shrink-0" aria-hidden="true" />Generate recipe
+              </Link>
+              {weight && (
+                <button className={`${item} ${soft}`} onClick={showWeight} style={{ animationDelay: "40ms" }}>
+                  <Scale className="size-4 shrink-0" aria-hidden="true" />Log weight
+                </button>
+              )}
+              <button className={item} onClick={showLog}>
+                <UtensilsCrossed className="size-4 shrink-0" aria-hidden="true" />Log meal
               </button>
-            )}
-          </div>
+            </div>
+          </>
         )}
         <button aria-label={menu ? "Close quick actions" : "Quick actions"} aria-expanded={menu}
           aria-controls="quick-fab-menu" onClick={() => setMenu((m) => !m)}
           className="btn !size-14 !rounded-full !p-0 shadow-xl">
-          {menu ? <X className="size-6" aria-hidden="true" /> : <Plus className="size-7" aria-hidden="true" />}
+          {/* One plus that turns into a cross, rather than swapping icons */}
+          <Plus className={`size-7 transition-transform duration-200 ${menu ? "rotate-45" : ""}`} aria-hidden="true" />
         </button>
       </div>
 

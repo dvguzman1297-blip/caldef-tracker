@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 const TABLES = [
   ["profile", "profiles", "id"], ["health_metrics", "health_metrics", "user_id"],
   ["daily_logs", "daily_logs", "user_id"], ["logged_meals", "logged_meals", "user_id"],
-  ["weight_logs", "weight_logs", "user_id"], ["fasts", "fasts", "user_id"], ["saved_foods", "saved_foods", "user_id"],
+  ["weight_logs", "weight_logs", "user_id"], ["fasts", "fasts", "user_id"], ["fasting_schedule", "fasting_schedule", "user_id"], ["saved_foods", "saved_foods", "user_id"],
   ["meal_plan_entries", "meal_plan_entries", "user_id"], ["lane_builder_configs", "lane_builder_configs", "user_id"],
 ] as const;
 

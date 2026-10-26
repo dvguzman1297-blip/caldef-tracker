@@ -43,6 +43,13 @@ describe.each(Object.entries(themes))("%s theme contrast", (_name, t) => {
     expect(contrast(parseHex(t["accent-fg"]), onTrack)).toBeGreaterThanOrEqual(4.5);
   });
 
+  it("text stays readable on the cards' tinted gradient top (7% accent over the surface)", () => {
+    const top = over([...parseHex(t.accent).slice(0, 3), 0.07] as [number, number, number, number], parseHex(t.surface));
+    for (const fg of ["fg", "fg-muted", "fg-subtle", "accent-fg", "danger"]) {
+      expect(contrast(parseHex(t[fg]), top), `${fg} on card tint`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   it("form control borders and focus ring are at least 3:1 (WCAG 1.4.11)", () => {
     for (const bg of ["surface", "surface-inset"]) {
       expect(c(t, "border-strong", bg), `border-strong on ${bg}`).toBeGreaterThanOrEqual(3);

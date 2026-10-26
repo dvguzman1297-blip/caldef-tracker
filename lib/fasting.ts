@@ -12,7 +12,11 @@ export const protocolHours = (id: string) => PROTOCOLS.find((p) => p.id === id)?
 export const MAX_TARGET_HOURS = 72;
 export const MAX_BACKDATE_HOURS = 48;
 
-export type FastRow = { id: string; started_at: string; ended_at: string | null; target_hours: number | string };
+export type FastRow = {
+  id: string; started_at: string; ended_at: string | null; target_hours: number | string;
+  /** 'schedule' when the recurring schedule created it. */
+  source?: string;
+};
 
 const HOUR = 3_600_000, MIN = 60_000;
 
@@ -63,4 +67,30 @@ export function checkStart(startMs: number, nowMs: number): string | null {
   if (startMs > nowMs + MIN) return "A fast can't start in the future.";
   if (nowMs - startMs > MAX_BACKDATE_HOURS * HOUR) return `Start times can go back at most ${MAX_BACKDATE_HOURS} hours.`;
   return null;
+}
+
+/** Where you stand if a fast began at `startMs`: still fasting, or its goal time already passed (eating window). */
+export function previewStart(startMs: number, nowMs: number, targetHours: number):
+  | { kind: "error"; message: string }
+  | { kind: "fasting"; elapsedMs: number; remainingMs: number; endMs: number }
+  | { kind: "done"; endMs: number; sinceMs: number } {
+  const bad = checkStart(startMs, nowMs);
+  if (bad) return { kind: "error", message: bad };
+  const endMs = startMs + targetHours * HOUR;
+  return endMs <= nowMs
+    ? { kind: "done", endMs, sinceMs: nowMs - endMs }
+    : { kind: "fasting", elapsedMs: nowMs - startMs, remainingMs: endMs - nowMs, endMs };
+}
+
+/**
+ * After a fast ends: are you still in the eating window before the next one (24h minus the fast length)?
+ * Null when there's no recent finished fast, the window is over, or the fast was 24h+ (no eating window).
+ */
+export function eatingWindow(last: FastRow | undefined, nowMs: number): { sinceMs: number; leftMs: number } | null {
+  if (!last?.ended_at) return null;
+  const eatingMs = (24 - Number(last.target_hours)) * HOUR;
+  if (eatingMs <= 0) return null;
+  const sinceMs = nowMs - new Date(last.ended_at).getTime();
+  const leftMs = eatingMs - sinceMs;
+  return sinceMs >= 0 && leftMs > 0 ? { sinceMs, leftMs } : null;
 }

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { AccountMenu, menuItemClass } from "./account-menu";
+import { InstallAppItem } from "./pwa-install";
 import { AddMealForm } from "./add-meal-form";
 import { ThemeToggle } from "./theme-toggle";
 import { Wordmark } from "./wordmark";
@@ -106,6 +107,7 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
                 aria-current={isActive("/profile") ? "page" : undefined}>
                 <UserRound className="size-4" strokeWidth={1.75} aria-hidden="true" />Your profile
               </Link>
+              <InstallAppItem />
             </AccountMenu>
           </div>
         </header>
@@ -127,6 +129,7 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
                 aria-current={isActive("/lanes") ? "page" : undefined}>
                 <Columns3 className="size-4" strokeWidth={1.75} aria-hidden="true" />Meal Planning
               </Link>
+              <InstallAppItem />
               {isAdmin && (
                 <Link href="/admin" className={menuItemClass}>
                   <Shield className="size-4" strokeWidth={1.75} aria-hidden="true" />Admin

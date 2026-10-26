@@ -5,10 +5,11 @@ import { getDay, targetsOf } from "@/lib/day";
 import { addDays, dateLabel, formatDay, parseDateParam } from "@/lib/date";
 import { formatChange, weightChange } from "@/lib/weight";
 import { buildPicks, type PickRow, type QuickPick } from "@/lib/quick-picks";
-import { getToday } from "@/lib/today";
+import { getTimeZone, getToday } from "@/lib/today";
 import { DayHeader } from "@/components/day-header";
 import { DayView } from "@/components/day-view";
 import { FastingCard } from "@/components/fasting-card";
+import { loadSchedule, syncScheduledFast } from "@/lib/fasting-sync";
 import { OnboardingCard } from "@/components/onboarding";
 import { PageShell } from "@/components/page-shell";
 import { WeightForm } from "@/components/weight-form";
@@ -20,7 +21,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const previousDate = addDays(date, -1);
 
   const { supabase: s, uid } = await requireAuth();
-  const [metricsRes, day, previous, weightsRes, historyRes, foodsRes, fastsRes] = await Promise.all([
+  const [metricsRes, day, previous, weightsRes, historyRes, foodsRes, schedule] = await Promise.all([
     s.from("health_metrics").select("*").eq("user_id", uid).maybeSingle(),
     getDay(s, uid, date),
     getDay(s, uid, previousDate),
@@ -30,9 +31,14 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       .eq("user_id", uid).is("deleted_at", null)
       .gte("daily_logs.log_date", addDays(date, -60)).lte("daily_logs.log_date", date).limit(500),
     s.from("saved_foods").select("name,calories,protein_g,fiber_g,net_carbs_g,fat_g").eq("user_id", uid).order("name").limit(12),
-    s.from("fasts").select("id,started_at,ended_at,target_hours").eq("user_id", uid)
-      .order("started_at", { ascending: false }).limit(8),
+    loadSchedule(s, uid),
   ]);
+
+  // Make the stored fasts match the schedule (starts/ends a scheduled fast that is due), then read them
+  const tz = await getTimeZone();
+  const nextStartMs = await syncScheduledFast(s, uid, schedule, tz);
+  const fastsRes = await s.from("fasts").select("id,started_at,ended_at,target_hours,source").eq("user_id", uid)
+    .eq("skipped", false).order("started_at", { ascending: false }).limit(8);
   if (metricsRes.error) throw new Error(`Could not load your targets: ${metricsRes.error.message}`);
   if (!metricsRes.data) redirect("/profile");
   if (weightsRes.error) throw new Error(`Could not load your weight: ${weightsRes.error.message}`);
@@ -81,7 +87,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
       <DayView date={date} meals={day.meals} targets={targetsOf(m)} recent={recent} frequent={frequent} favorites={favorites}
         previousDate={previousDate} previousMeals={previous.meals}
-        rail={fasts && <FastingCard fasts={fasts} />}
+        rail={fasts && <FastingCard fasts={fasts} schedule={schedule} nextStartMs={nextStartMs} />}
         // The weight card is for phones (no floating menu there); on desktop the menu's "Log weight" opens it in a dialog
         belowMeals={<section className="glass p-4 md:hidden" aria-label="Weight">{weightBody}</section>}
         weightDialog={weightBody} weightSummary={weightSummary} />

@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/register", "/forgot-password", "/auth/callback"];
+// Installability files must load without a session: browsers fetch the manifest and service worker without cookies
+const PUBLIC = ["/login", "/register", "/forgot-password", "/auth/callback", "/manifest.webmanifest", "/sw.js", "/offline.html", "/icons/"];
 
 export async function proxy(req: NextRequest) {
   let res = NextResponse.next({ request: req });

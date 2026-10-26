@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offline · CalDef</title>
+<style>
+  :root { color-scheme: light dark; --bg: #eaf0f6; --card: #fff; --fg: #0f172a; --muted: #475569; --accent: #047857; --on: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0b0f19; --card: #161c2e; --fg: #e8ecf5; --muted: #a3aec2; --accent: #10b981; --on: #04231a; } }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 1rem; background: var(--bg); color: var(--fg);
+         font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 22rem; padding: 2rem 1.5rem; text-align: center; background: var(--card); border-radius: 1rem; }
+  h1 { margin: 0 0 .5rem; font-size: 1.25rem; }
+  p { margin: 0 0 1.25rem; color: var(--muted); line-height: 1.5; }
+  button { font: inherit; font-weight: 600; padding: .65rem 1.25rem; border: 0; border-radius: .75rem; background: var(--accent); color: var(--on); cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1>You're offline</h1>
+  <p>CalDef needs a connection to load your log. Check your network and try again.</p>
+  <button onclick="location.reload()">Try again</button>
+</main>
+</body>
+</html>
