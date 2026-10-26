@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, Check, Plus, Trash2 } from "lucide-react";
 import { addPlanEntry, deletePlanEntry, logPlanEntry, movePlanEntry, setPlanServings } from "@/app/actions/plan";
+import { unwrap } from "@/lib/action-result";
 
 export type PlanEntry = {
   id: string; slot: string; title: string; servings: number; calories: number;
@@ -58,11 +59,11 @@ export function PlanDay({ date, canLog, entries, foods, targets }: {
                       </span>
                       <span className="flex shrink-0">
                         <button className={icon} aria-label={`Move ${e.title} up`} disabled={pending || i === 0}
-                          onClick={() => run(() => movePlanEntry(e.id, "up"))}><ArrowUp className="size-4" /></button>
+                          onClick={() => run(() => unwrap(movePlanEntry(e.id, "up")))}><ArrowUp className="size-4" /></button>
                         <button className={icon} aria-label={`Move ${e.title} down`} disabled={pending || i === items.length - 1}
-                          onClick={() => run(() => movePlanEntry(e.id, "down"))}><ArrowDown className="size-4" /></button>
+                          onClick={() => run(() => unwrap(movePlanEntry(e.id, "down")))}><ArrowDown className="size-4" /></button>
                         <button className={icon} aria-label={`Remove ${e.title} from plan`} disabled={pending}
-                          onClick={() => run(() => deletePlanEntry(e.id))}><Trash2 className="size-4" /></button>
+                          onClick={() => run(() => unwrap(deletePlanEntry(e.id)))}><Trash2 className="size-4" /></button>
                       </span>
                     </div>
                     <div className="mt-1 flex items-center gap-2">
@@ -70,13 +71,13 @@ export function PlanDay({ date, canLog, entries, foods, targets }: {
                         <input type="number" min="0.25" max="20" step="0.25" defaultValue={e.servings} aria-label={`Servings of ${e.title}`} disabled={e.logged || pending}
                           className="input !h-9 !w-20" onBlur={(ev) => {
                             const v = Number(ev.target.value);
-                            if (v > 0 && v !== e.servings) run(() => setPlanServings(e.id, v));
+                            if (v > 0 && v !== e.servings) run(() => unwrap(setPlanServings(e.id, v)));
                           }} />
                       </label>
                       {!e.logged && (
                         <button className="btn btn-ghost !h-9" disabled={pending || !canLog}
                           title={canLog ? undefined : "Future meals can be logged on their day"}
-                          onClick={() => run(() => logPlanEntry(e.id))}><Check className="size-4" />Log this meal</button>
+                          onClick={() => run(() => unwrap(logPlanEntry(e.id)))}><Check className="size-4" />Log this meal</button>
                       )}
                     </div>
                   </li>
@@ -105,12 +106,12 @@ function AddEntry({ date, foods, run, pending }: {
         const f = foods.find((x) => x.id === foodId);
         const n = (k: string) => Number(fd.get(k) || 0);
         run(async () => {
-          await addPlanEntry({
+          await unwrap(addPlanEntry({
             date, slot: fd.get("slot") as any, title: String(fd.get("title") ?? ""),
             servings: n("servings") || 1, calories: n("calories"), protein: n("protein"),
             fiber: n("fiber"), netCarbs: n("netCarbs"), fat: n("fat"),
             source: f ? "saved_food" : "manual",
-          });
+          }));
           form.reset(); setFoodId("");
         });
       }}>

@@ -6,6 +6,7 @@ import { Bookmark, Check, ChefHat, Clock, History, Minus, Plus, RefreshCw, Shiel
 import { logMeal } from "@/app/actions/meals";
 import { saveFood } from "@/app/actions/foods";
 import { addPlanEntry } from "@/app/actions/plan";
+import { unwrap } from "@/lib/action-result";
 import { SLOTS, MEAL_SHARE, mealTarget, targetFit, type Slot } from "@/lib/budget";
 import { formatDate } from "@/lib/date";
 import { useToast } from "@/components/toast";
@@ -264,7 +265,7 @@ export function PantryClient({ remaining, today }: { remaining: Remaining; today
             <div className="flex flex-wrap gap-2">
               <button className="btn" disabled={pending || logged || !reviewed} onClick={() => start(async () => {
                 try {
-                  await logMeal({ slot, title: recipe.title, ...macros });
+                  await unwrap(logMeal({ slot, title: recipe.title, ...macros }));
                   setLogged(true); toast({ message: `Logged “${recipe.title}” to ${slot}.` });
                 } catch (e) { toast({ tone: "error", message: e instanceof Error ? e.message : "Could not log that meal." }); }
               })}>
@@ -272,7 +273,7 @@ export function PantryClient({ remaining, today }: { remaining: Remaining; today
               </button>
               <button className="btn btn-ghost" disabled={pending || savedRecipe} onClick={() => start(async () => {
                 try {
-                  await saveFood({ name: recipe.title, serving: "1 serving", ...macros });
+                  await unwrap(saveFood({ name: recipe.title, serving: "1 serving", ...macros }));
                   setSavedRecipe(true); toast({ message: "Saved to your favorites (nutrition only). Find it on the dashboard's Favorites." });
                 } catch (e) { toast({ tone: "error", message: e instanceof Error ? e.message : "Could not save that recipe." }); }
               })}>
@@ -288,7 +289,7 @@ export function PantryClient({ remaining, today }: { remaining: Remaining; today
                 <input id="planDate" type="date" className="input !min-h-11" value={planDate} onChange={(e) => setPlanDate(e.target.value)} /></div>
               <button className="btn btn-ghost" disabled={pending || !planDate || !reviewed} onClick={() => start(async () => {
                 try {
-                  await addPlanEntry({ date: planDate, slot, title: recipe.title, ...macros, ingredients: recipe.ingredients, source: "ai_recipe" });
+                  await unwrap(addPlanEntry({ date: planDate, slot, title: recipe.title, ...macros, ingredients: recipe.ingredients, source: "ai_recipe" }));
                   setPlanned(`Added to your ${slot} plan for ${formatDate(planDate, today)}.`);
                 } catch (e) { setPlanned(e instanceof Error ? e.message : "Could not add to plan."); }
               })}>Add to meal plan</button>

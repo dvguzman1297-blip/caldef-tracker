@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { askJson } from "@/lib/groq-json";
 import { checkMacros } from "@/lib/nutrition";
+import { consumeAiQuota, QUOTA_MESSAGE } from "@/lib/ai-quota";
 
 const Input = z.object({ description: z.string().min(3).max(300) });
 const Out = z.object({
@@ -22,6 +23,8 @@ export async function POST(req: Request) {
 
   const parsed = Input.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Describe your meal in a few words" }, { status: 400 });
+
+  if (!(await consumeAiQuota(supabase))) return NextResponse.json({ error: QUOTA_MESSAGE }, { status: 429 });
 
   try {
     const o = Out.parse(await askJson(system, `Meal: ${parsed.data.description}`));

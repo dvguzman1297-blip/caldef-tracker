@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { deleteAccount } from "@/app/actions/account";
+import { unwrap } from "@/lib/action-result";
 
 export function PrivacyPanel() {
   const [text, setText] = useState("");
@@ -28,7 +29,7 @@ export function PrivacyPanel() {
             onClick={() => start(async () => {
               setErr("");
               try {
-                await deleteAccount(text);
+                await unwrap(deleteAccount(text));
                 window.location.assign("/login");
               } catch (e: any) {
                 setErr(e.message || "Could not delete account.");

@@ -1,6 +1,7 @@
 "use server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { safe } from "@/lib/safe-action";
 import { createClient } from "@/lib/supabase/server";
 import { CUSTOM_KCAL, FAT_PCT, PROTEIN_PER_KG, computeTargets } from "@/lib/health";
 import { ALLERGEN_KEYS } from "@/lib/allergens";
@@ -28,7 +29,8 @@ const ProfileSchema = z.object({
   medicalCondition: z.boolean(),
 });
 
-export async function saveProfile(raw: z.input<typeof ProfileSchema>) {
+export async function saveProfile(raw: z.input<typeof ProfileSchema>) { return safe(() => saveProfileImpl(raw)); }
+async function saveProfileImpl(raw: z.input<typeof ProfileSchema>) {
   const p = ProfileSchema.parse(raw);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -73,7 +75,8 @@ const DietarySchema = z.object({
  * Updates only dietary text and allergens. Targets are NOT recomputed, so the health check (which is
  * never stored) isn't needed and an existing no-deficit result can't be silently overwritten.
  */
-export async function saveDietary(raw: z.input<typeof DietarySchema>) {
+export async function saveDietary(raw: z.input<typeof DietarySchema>) { return safe(() => saveDietaryImpl(raw)); }
+async function saveDietaryImpl(raw: z.input<typeof DietarySchema>) {
   const d = DietarySchema.parse(raw);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

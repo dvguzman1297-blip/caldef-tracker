@@ -2,6 +2,7 @@
 import { getToday } from "@/lib/today";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { safe } from "@/lib/safe-action";
 import { createClient } from "@/lib/supabase/server";
 import { isValidDate } from "@/lib/date";
 import { insertMealRow } from "@/lib/meal-store";
@@ -26,7 +27,8 @@ async function user() {
 }
 const refresh = () => revalidatePath("/lanes");
 
-export async function addPlanEntry(raw: z.input<typeof Entry>) {
+export async function addPlanEntry(raw: z.input<typeof Entry>) { return safe(() => addPlanEntryImpl(raw)); }
+async function addPlanEntryImpl(raw: z.input<typeof Entry>) {
   const e = Entry.parse(raw);
   const { supabase, user: u } = await user();
   const { data: last } = await supabase.from("meal_plan_entries").select("position")
@@ -41,7 +43,8 @@ export async function addPlanEntry(raw: z.input<typeof Entry>) {
   refresh();
 }
 
-export async function setPlanServings(id: string, servings: number) {
+export async function setPlanServings(id: string, servings: number) { return safe(() => setPlanServingsImpl(id, servings)); }
+async function setPlanServingsImpl(id: string, servings: number) {
   const s = z.number().finite().min(0.25).max(20).parse(servings);
   const { supabase, user: u } = await user();
   const { error } = await supabase.from("meal_plan_entries").update({ servings: s })
@@ -51,7 +54,8 @@ export async function setPlanServings(id: string, servings: number) {
 }
 
 /** Swaps an entry with its neighbour in the same day and slot. */
-export async function movePlanEntry(id: string, dir: "up" | "down") {
+export async function movePlanEntry(id: string, dir: "up" | "down") { return safe(() => movePlanEntryImpl(id, dir)); }
+async function movePlanEntryImpl(id: string, dir: "up" | "down") {
   const { supabase, user: u } = await user();
   const { data: me, error } = await supabase.from("meal_plan_entries").select("id,plan_date,slot,position")
     .eq("id", id).eq("user_id", u.id).single();
@@ -70,7 +74,8 @@ export async function movePlanEntry(id: string, dir: "up" | "down") {
   refresh();
 }
 
-export async function deletePlanEntry(id: string) {
+export async function deletePlanEntry(id: string) { return safe(() => deletePlanEntryImpl(id)); }
+async function deletePlanEntryImpl(id: string) {
   const { supabase, user: u } = await user();
   const { error } = await supabase.from("meal_plan_entries").delete().eq("id", id).eq("user_id", u.id);
   if (error) throw new Error(`Could not remove entry: ${error.message}`);
@@ -78,7 +83,8 @@ export async function deletePlanEntry(id: string) {
 }
 
 /** Logs a planned meal (macros × servings) to its plan date and links the two. */
-export async function logPlanEntry(id: string) {
+export async function logPlanEntry(id: string) { return safe(() => logPlanEntryImpl(id)); }
+async function logPlanEntryImpl(id: string) {
   const { supabase, user: u } = await user();
   const { data: e, error } = await supabase.from("meal_plan_entries").select("*")
     .eq("id", id).eq("user_id", u.id).single();

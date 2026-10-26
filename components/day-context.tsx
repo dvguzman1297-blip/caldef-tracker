@@ -1,6 +1,7 @@
 "use client";
 import { createContext, startTransition, useCallback, useContext, useMemo, useOptimistic, type ReactNode } from "react";
 import { deleteMeal, restoreMeal } from "@/app/actions/meals";
+import { unwrap } from "@/lib/action-result";
 import type { Meal } from "@/lib/day";
 import { useToast } from "@/components/toast";
 
@@ -50,13 +51,13 @@ export function DayProvider({ date, meals: server, children }: { date: string; m
     startTransition(async () => {
       apply({ type: "remove", id: m.id });
       try {
-        await deleteMeal(m.id);
+        await unwrap(deleteMeal(m.id));
         toast({
           message: `Deleted “${m.title}”.`,
           action: {
             label: "Undo",
             onClick: () => startTransition(async () => {
-              try { await restoreMeal(m.id); } catch (e) { fail(e, "Could not restore the meal."); }
+              try { await unwrap(restoreMeal(m.id)); } catch (e) { fail(e, "Could not restore the meal."); }
             }),
           },
         });

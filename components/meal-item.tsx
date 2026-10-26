@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { Copy, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { duplicateMeal, updateMeal } from "@/app/actions/meals";
+import { unwrap } from "@/lib/action-result";
 import { isPending as isTemp, useDay } from "@/components/day-context";
 import { useToast } from "@/components/toast";
 import { MacroLine } from "@/components/macro-line";
@@ -31,12 +32,12 @@ export function MealItem({ meal: x }: { meal: Meal }) {
   if (editing) {
     return (
       <li>
-        <form className="grid grid-cols-2 gap-2" action={(fd) => run(() => updateMeal(x.id, {
+        <form className="grid grid-cols-2 gap-2" action={(fd) => run(() => unwrap(updateMeal(x.id, {
           slot: fd.get("slot"), title: String(fd.get("title") ?? ""),
           calories: Number(fd.get("calories")), protein: Number(fd.get("protein")),
           fiber: Number(fd.get("fiber")), netCarbs: Number(fd.get("netCarbs")), fat: Number(fd.get("fat")),
           consumedTime: (fd.get("consumedTime") as string) || null,
-        }), () => setEditing(false))}>
+        })), () => setEditing(false))}>
           <select name="slot" defaultValue={x.slot} className="input" aria-label="Meal slot">
             {SLOTS.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
           </select>
@@ -58,7 +59,7 @@ export function MealItem({ meal: x }: { meal: Meal }) {
   }
 
   return (
-    <li className="text-sm">
+    <li className="item-in text-sm">
       <div className="flex items-center justify-between gap-1">
         <span className="min-w-0">
           <span className="font-medium">{x.title}</span>
@@ -77,7 +78,7 @@ export function MealItem({ meal: x }: { meal: Meal }) {
             <Pencil className="size-4" aria-hidden="true" />Edit
           </button>
           <button className={rowMenuItem} disabled={pending || temp}
-            onClick={() => run(() => duplicateMeal(x.id), () => toast({ message: "Copied to today." }))}>
+            onClick={() => run(() => unwrap(duplicateMeal(x.id)), () => toast({ message: "Copied to today." }))}>
             <Copy className="size-4" aria-hidden="true" />Copy to today
           </button>
           <button className={`${rowMenuItem} text-danger hover:bg-danger-soft`} disabled={pending || temp} onClick={() => day?.remove(x)}>

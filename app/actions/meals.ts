@@ -1,10 +1,11 @@
 "use server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { safe } from "@/lib/safe-action";
 import { createClient } from "@/lib/supabase/server";
 import { getToday } from "@/lib/today";
 import { isValidDate } from "@/lib/date";
-import { Meal, insertMealRow } from "@/lib/meal-store";
+import { Meal, insertMealRow, insertMealRows } from "@/lib/meal-store";
 
 async function insertMeal(raw: unknown) {
   const { supabase, user } = await requireUser();
@@ -12,11 +13,13 @@ async function insertMeal(raw: unknown) {
   refresh();
 }
 
-export async function logMeal(input: z.input<typeof Meal>) {
+export async function logMeal(input: z.input<typeof Meal>) { return safe(() => logMealImpl(input)); }
+async function logMealImpl(input: z.input<typeof Meal>) {
   await insertMeal({ ...input, source: "ai_recipe" });
 }
 
-export async function addManualMeal(fd: FormData) {
+export async function addManualMeal(fd: FormData) { return safe(() => addManualMealImpl(fd)); }
+async function addManualMealImpl(fd: FormData) {
   const n = (k: string) => Number(fd.get(k) || 0);
   await insertMeal({
     slot: fd.get("slot"), title: String(fd.get("title") ?? ""),
@@ -37,7 +40,8 @@ async function requireUser() {
 
 const refresh = () => { revalidatePath("/"); revalidatePath("/history"); };
 
-export async function updateMeal(id: string, raw: unknown) {
+export async function updateMeal(id: string, raw: unknown) { return safe(() => updateMealImpl(id, raw)); }
+async function updateMealImpl(id: string, raw: unknown) {
   const m = Meal.omit({ date: true, source: true }).parse(raw);
   const { supabase, user } = await requireUser();
   const { error } = await supabase.from("logged_meals").update({
@@ -49,7 +53,8 @@ export async function updateMeal(id: string, raw: unknown) {
 }
 
 /** Copies a meal into the given day (default today), e.g. to repeat yesterday's breakfast. */
-export async function duplicateMeal(id: string, date?: string) {
+export async function duplicateMeal(id: string, date?: string) { return safe(() => duplicateMealImpl(id, date)); }
+async function duplicateMealImpl(id: string, date?: string) {
   const { supabase, user } = await requireUser();
   const { data: src, error } = await supabase.from("logged_meals").select("*")
     .eq("id", id).eq("user_id", user.id).is("deleted_at", null).single();
@@ -62,7 +67,8 @@ export async function duplicateMeal(id: string, date?: string) {
 }
 
 /** Soft delete so the UI can offer undo. */
-export async function deleteMeal(id: string) {
+export async function deleteMeal(id: string) { return safe(() => deleteMealImpl(id)); }
+async function deleteMealImpl(id: string) {
   const { supabase, user } = await requireUser();
   const { error } = await supabase.from("logged_meals")
     .update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user.id);
@@ -70,7 +76,8 @@ export async function deleteMeal(id: string) {
   refresh();
 }
 
-export async function restoreMeal(id: string) {
+export async function restoreMeal(id: string) { return safe(() => restoreMealImpl(id)); }
+async function restoreMealImpl(id: string) {
   const { supabase, user } = await requireUser();
   const { error } = await supabase.from("logged_meals")
     .update({ deleted_at: null }).eq("id", id).eq("user_id", user.id);
@@ -79,12 +86,14 @@ export async function restoreMeal(id: string) {
 }
 
 /** One-tap re-log of a recent, frequent or saved food. Numbers come from the user's own history. */
-export async function relogMeal(input: Omit<z.input<typeof Meal>, "source">) {
+export async function relogMeal(input: Omit<z.input<typeof Meal>, "source">) { return safe(() => relogMealImpl(input)); }
+async function relogMealImpl(input: Omit<z.input<typeof Meal>, "source">) {
   await insertMeal({ ...input, source: "manual" });
 }
 
 /** Copies every meal in `slot` from one day to another (e.g. "copy yesterday's lunch"). Returns how many were copied. */
-export async function copyMeals(fromDate: string, slot: z.input<typeof Meal>["slot"], toDate: string) {
+export async function copyMeals(fromDate: string, slot: z.input<typeof Meal>["slot"], toDate: string) { return safe(() => copyMealsImpl(fromDate, slot, toDate)); }
+async function copyMealsImpl(fromDate: string, slot: z.input<typeof Meal>["slot"], toDate: string) {
   if (!isValidDate(fromDate) || !isValidDate(toDate)) throw new Error("Invalid date");
   const { supabase, user } = await requireUser();
   const { data: log, error: e1 } = await supabase.from("daily_logs").select("id")
@@ -94,13 +103,11 @@ export async function copyMeals(fromDate: string, slot: z.input<typeof Meal>["sl
   const { data: src, error: e2 } = await supabase.from("logged_meals").select("*")
     .eq("daily_log_id", log.id).eq("slot", slot).is("deleted_at", null).order("created_at");
   if (e2) throw new Error(`Could not read that day: ${e2.message}`);
-  for (const m of src ?? []) {
-    await insertMealRow(supabase, user.id, {
-      slot: m.slot, title: m.title, calories: m.calories, protein: Number(m.protein_g),
-      fiber: Number(m.fiber_g), netCarbs: Number(m.net_carbs_g), fat: Number(m.fat_g),
-      source: m.source ?? "manual", date: toDate, consumedTime: null,
-    });
-  }
+  await insertMealRows(supabase, user.id, toDate, (src ?? []).map((m) => ({
+    slot: m.slot, title: m.title, calories: m.calories, protein: Number(m.protein_g),
+    fiber: Number(m.fiber_g), netCarbs: Number(m.net_carbs_g), fat: Number(m.fat_g),
+    source: m.source ?? "manual", date: toDate, consumedTime: null,
+  })));
   refresh();
   return src?.length ?? 0;
 }

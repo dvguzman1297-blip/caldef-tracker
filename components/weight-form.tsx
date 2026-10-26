@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { deleteWeight, logWeight } from "@/app/actions/weight";
+import { unwrap } from "@/lib/action-result";
 import { formatDay } from "@/lib/date";
 import { formatChange, parseWeight, weightChange } from "@/lib/weight";
 import { useToast } from "@/components/toast";
@@ -26,7 +27,7 @@ export function WeightForm({ date, today, label, current, previous }: Props) {
     if (!parsed.ok) { setError(parsed.error); return; }
     setError("");
     start(async () => {
-      try { await logWeight({ date, kg: parsed.kg }); toast({ message: `Saved ${parsed.kg} kg for ${label}.` }); }
+      try { await unwrap(logWeight({ date, kg: parsed.kg })); toast({ message: `Saved ${parsed.kg} kg for ${label}.` }); }
       catch (e) { setError(e instanceof Error ? e.message : "Could not save."); }
     });
   }
@@ -62,7 +63,7 @@ export function WeightForm({ date, today, label, current, previous }: Props) {
         {current && (
           <button type="button" className="btn btn-ghost" disabled={pending}
             onClick={() => start(async () => {
-              try { await deleteWeight(current.id); toast({ message: "Weight removed." }); }
+              try { await unwrap(deleteWeight(current.id)); toast({ message: "Weight removed." }); }
               catch (e) { setError(e instanceof Error ? e.message : "Could not remove."); }
             })}>Remove</button>
         )}

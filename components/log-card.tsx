@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Pencil, Sparkles } from "lucide-react";
 import { addManualMeal, relogMeal } from "@/app/actions/meals";
+import { unwrap } from "@/lib/action-result";
 import { SLOTS, type Slot } from "@/lib/budget";
 import type { QuickPick } from "@/lib/quick-picks";
 import { useDay } from "@/components/day-context";
@@ -69,14 +70,14 @@ export function LogCard({ recent, frequent, favorites }: { recent: QuickPick[]; 
     day.log({
       slot, title: draft.title.trim(), calories: Number(draft.calories), protein: Number(draft.protein),
       fiber: Number(draft.fiber), netCarbs: Number(draft.netCarbs), fat: Number(draft.fat), source: "ai_estimate",
-    }, () => addManualMeal(fd), `Added “${draft.title.trim()}” to ${slot}.`);
+    }, () => unwrap(addManualMeal(fd)), `Added “${draft.title.trim()}” to ${slot}.`);
     setDraft(null); setDesc(""); setReviewed(false);
   }
 
   function relog(p: QuickPick) {
     day.log({ slot, title: p.title, calories: p.calories, protein: p.protein, fiber: p.fiber, netCarbs: p.netCarbs, fat: p.fat },
-      () => relogMeal({ slot, title: p.title, calories: p.calories, protein: p.protein, fiber: p.fiber,
-        netCarbs: p.netCarbs, fat: p.fat, date: day.date }),
+      () => unwrap(relogMeal({ slot, title: p.title, calories: p.calories, protein: p.protein, fiber: p.fiber,
+        netCarbs: p.netCarbs, fat: p.fat, date: day.date })),
       `Logged “${p.title}” to ${slot}.`);
   }
 
@@ -87,11 +88,13 @@ export function LogCard({ recent, frequent, favorites }: { recent: QuickPick[]; 
         <p className="text-sm text-muted">Describe what you ate and we&apos;ll estimate it. You can edit the numbers before saving.</p>
       </div>
 
-      <form className="flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); if (desc.trim().length >= 3 && !busy) estimate(); }}>
+      <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); if (desc.trim().length >= 3 && !busy) estimate(); }}>
         <label htmlFor="describe-meal" className="sr-only">Describe what you ate</label>
-        <input id="describe-meal" value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={300}
-          className="input !min-h-12 !text-base" placeholder="e.g. 2 scrambled eggs, 2 slices whole wheat toast, half an avocado" />
-        <button className="btn shrink-0 !min-h-12" disabled={busy || desc.trim().length < 3}>
+        {/* Two visible lines so the example is readable in the narrow desktop column; Enter submits, Shift+Enter adds a line */}
+        <textarea id="describe-meal" value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={300} rows={2}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }}
+          className="input resize-none !text-base" placeholder="e.g. 2 scrambled eggs, 2 slices whole wheat toast, half an avocado" />
+        <button className="btn !min-h-12 w-full" disabled={busy || desc.trim().length < 3}>
           <Sparkles className="size-4" aria-hidden="true" />{busy ? "Estimating…" : "Estimate"}
         </button>
       </form>
@@ -116,7 +119,8 @@ export function LogCard({ recent, frequent, favorites }: { recent: QuickPick[]; 
             <input id="draft-title" className="input" value={draft.title} maxLength={120}
               onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {/* Full-width column: 5 across. From lg this card is the narrow right rail, so 3 across (inputs bottom-aligned when labels wrap) */}
+          <div className="grid grid-cols-2 items-end gap-2 sm:grid-cols-5 lg:grid-cols-3">
             {FIELDS.map(([k, l]) => (
               <div key={k}>
                 <label className="label" htmlFor={`draft-${k}`}>{l}</label>
@@ -151,12 +155,12 @@ export function LogCard({ recent, frequent, favorites }: { recent: QuickPick[]; 
               ))}
             </div>
           </div>
-          <ul className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
+          <ul className="flex gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible">
             {active[1].map((p) => (
-              <li key={p.title} className="shrink-0">
+              <li key={p.title} className="shrink-0 sm:min-w-0 sm:shrink">
                 <button type="button" onClick={() => relog(p)}
-                  className="min-h-11 rounded-xl border border-line bg-inset px-3 py-1.5 text-left text-sm hover:border-accent hover:bg-surface-2">
-                  <span className="block max-w-48 truncate font-medium">{p.title}</span>
+                  className="chip min-h-11 w-full rounded-xl border border-line bg-inset px-3 py-1.5 text-left text-sm hover:border-accent hover:bg-surface-2">
+                  <span className="block max-w-48 truncate font-medium sm:max-w-none">{p.title}</span>
                   <span className="text-xs text-muted">{p.calories} kcal · {Math.round(p.protein)}g protein</span>
                 </button>
               </li>

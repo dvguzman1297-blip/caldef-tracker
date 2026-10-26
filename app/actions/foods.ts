@@ -1,5 +1,6 @@
 "use server";
 import { z } from "zod";
+import { safe } from "@/lib/safe-action";
 import { createClient } from "@/lib/supabase/server";
 
 const Food = z.object({
@@ -18,7 +19,8 @@ async function user() {
 }
 
 /** Saves a reusable food/meal. Numbers are the user's own (provenance: user_entered). */
-export async function saveFood(raw: z.input<typeof Food>) {
+export async function saveFood(raw: z.input<typeof Food>) { return safe(() => saveFoodImpl(raw)); }
+async function saveFoodImpl(raw: z.input<typeof Food>) {
   const f = Food.parse(raw);
   const { supabase, user: u } = await user();
   const { error } = await supabase.from("saved_foods").insert({
@@ -29,7 +31,8 @@ export async function saveFood(raw: z.input<typeof Food>) {
   if (error) throw new Error(`Could not save food: ${error.message}`);
 }
 
-export async function deleteFood(id: string) {
+export async function deleteFood(id: string) { return safe(() => deleteFoodImpl(id)); }
+async function deleteFoodImpl(id: string) {
   const { supabase, user: u } = await user();
   const { error } = await supabase.from("saved_foods").delete().eq("id", id).eq("user_id", u.id);
   if (error) throw new Error(`Could not delete food: ${error.message}`);

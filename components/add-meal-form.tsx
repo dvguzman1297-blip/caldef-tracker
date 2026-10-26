@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, Sparkles } from "lucide-react";
 import { addManualMeal } from "@/app/actions/meals";
 import { saveFood } from "@/app/actions/foods";
+import { unwrap } from "@/lib/action-result";
 import { createClient } from "@/lib/supabase/client";
 import { useDay } from "@/components/day-context";
 
@@ -58,8 +59,8 @@ export function AddMealForm({ onDone, date, slot }: {
     const fd = new FormData(formRef.current!);
     const n = (k: string) => Number(fd.get(k) || 0);
     try {
-      await saveFood({ name: String(fd.get("title") ?? ""), serving: "1 serving", calories: n("calories"),
-        protein: n("protein"), fiber: n("fiber"), netCarbs: n("netCarbs"), fat: n("fat") });
+      await unwrap(saveFood({ name: String(fd.get("title") ?? ""), serving: "1 serving", calories: n("calories"),
+        protein: n("protein"), fiber: n("fiber"), netCarbs: n("netCarbs"), fat: n("fat") }));
       await loadFoods(); setMsg({ ok: true, text: "Saved to your foods." });
     } catch (e: any) { setMsg({ ok: false, text: e.message || "Could not save food." }); }
   }
@@ -103,14 +104,14 @@ export function AddMealForm({ onDone, date, slot }: {
         slot: String(fd.get("slot")) as (typeof SLOTS)[number]["value"], title: String(fd.get("title") ?? ""),
         calories: n("calories"), protein: n("protein"), fiber: n("fiber"), netCarbs: n("netCarbs"), fat: n("fat"),
         source: String(fd.get("source")),
-      }, () => addManualMeal(fd), "Meal added.");
+      }, () => unwrap(addManualMeal(fd)), "Meal added.");
       formRef.current?.reset(); setDesc(""); setAiFilled(false); setReviewed(false); setMsg(null);
       onDone?.();
       return;
     }
     setAdding(true); setMsg(null);
     try {
-      await addManualMeal(fd);
+      await unwrap(addManualMeal(fd));
       formRef.current?.reset(); setDesc(""); setAiFilled(false); setReviewed(false);
       onDone?.();
     } catch {

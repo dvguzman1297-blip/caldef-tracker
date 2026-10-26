@@ -1,4 +1,3 @@
-import Groq from "groq-sdk";
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -6,8 +5,8 @@ import { getDay, targetsOf } from "@/lib/day";
 import { getToday } from "@/lib/today";
 import { ALLERGENS, findAllergens, isAllergenKey } from "@/lib/allergens";
 import { checkMacros, budgetWarnings } from "@/lib/nutrition";
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+import { askJson } from "@/lib/groq-json";
+import { consumeAiQuota, QUOTA_MESSAGE } from "@/lib/ai-quota";
 
 const Input = z.object({
   pantry: z.string().min(3).max(500),
@@ -75,40 +74,19 @@ Rules: the recipe makes the number of servings stated in the user message (defau
   ];
   const userMsg = lines.filter(Boolean).join("\n");
 
-  const ask = (strictJson: boolean): Promise<any> =>
-    groq.chat.completions.create({
-      model: "openai/gpt-oss-120b",
-      messages: [{ role: "system", content: system }, { role: "user", content: userMsg }],
-      ...(strictJson ? { response_format: { type: "json_object" as const } } : {}),
-      temperature: 0.4,
-      max_completion_tokens: 3000,
-      reasoning_effort: "low",
-    } as any);
+  if (!(await consumeAiQuota(supabase))) return NextResponse.json({ error: QUOTA_MESSAGE }, { status: 429 });
 
-  const extractJson = (text: string) => {
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start === -1 || end <= start) throw new Error("Model returned no JSON");
-    return JSON.parse(text.slice(start, end + 1));
-  };
+  const ask = (extra = "") => askJson(system, extra ? `${userMsg}
+${extra}` : userMsg, { temperature: 0.4, maxTokens: 3000 });
 
   try {
-    let text = "";
-    try {
-      text = (await ask(true)).choices[0]?.message?.content ?? "";
-    } catch (e: any) {
-      // Groq's JSON validator can reject reasoning-model output; retry once without it
-      if (e?.status !== 400) throw e;
-    }
-    if (!text.trim()) text = (await ask(false)).choices[0]?.message?.content ?? "";
-
-    let recipe = Recipe.parse(extractJson(text));
+    let recipe = Recipe.parse(await ask());
     // Enforce allergens on the output: the prompt alone is not a safeguard. Retry once, then refuse.
     const hits = (r: z.infer<typeof Recipe>) =>
       findAllergens([r.title, ...r.ingredients, ...r.steps].join(" \n "), allergens);
     if (hits(recipe).length) {
-      const retry = (await ask(false)).choices[0]?.message?.content ?? "";
-      recipe = Recipe.parse(extractJson(retry));
+      const found = hits(recipe).map((k) => ALLERGENS[k].label).join(", ");
+      recipe = Recipe.parse(await ask(`A previous attempt contained ${found}, which the user is allergic to. Make a recipe with none of it or its derivatives.`));
       if (hits(recipe).length) {
         return NextResponse.json({ error: "Couldn't produce a recipe that avoids your listed allergens. Try different ingredients." }, { status: 422 });
       }

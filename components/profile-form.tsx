@@ -10,6 +10,7 @@ import {
 } from "@/lib/health";
 import { formatDate } from "@/lib/date";
 import { saveDietary, saveProfile } from "@/app/actions/profile";
+import { unwrap } from "@/lib/action-result";
 import { ALLERGENS, ALLERGEN_KEYS } from "@/lib/allergens";
 import { useToast } from "@/components/toast";
 import { CheckField } from "@/components/ui/check-field";
@@ -115,19 +116,19 @@ export function ProfileForm({ defaults, saved, isNew, today }: {
     setError(""); setJustSaved(false);
     try {
       if (targetDirty) {
-        await saveProfile({ ...d, customCalories: customMode && customOk ? customN : undefined, acknowledgedLowTarget: !!d.lowAck });
+        await unwrap(saveProfile({ ...d, customCalories: customMode && customOk ? customN : undefined, acknowledgedLowTarget: !!d.lowAck }));
         if (preview) setSavedTargets({ calories: preview.targetCalories, protein: preview.targetProteinG, fiber: preview.targetFiberG, carbs: preview.targetCarbsG, fat: preview.targetFatG, bmr: preview.bmr, tdee: preview.tdee });
         toast({ message: preview?.restrictedReason ? "Profile saved. No calorie deficit was applied." : `Profile saved. Your target is ${n0(preview?.targetCalories ?? 0)} kcal a day.` });
       } else {
-        await saveDietary({ dietaryPreferences: d.dietaryPreferences, allergens: d.allergens });
+        await unwrap(saveDietary({ dietaryPreferences: d.dietaryPreferences, allergens: d.allergens }));
         toast({ message: "Food preferences saved. Your targets are unchanged." });
       }
       // Health-check answers are never stored: clear them after every save
       const next = { ...d, lowAck: false, pregnantOrNursing: false, eatingDisorderRisk: false, medicalCondition: false };
       setBaseline(next); reset(next); setJustSaved(true);
       if (isNew) router.push("/"); else router.refresh();
-    } catch {
-      setError("Could not save your profile. Check the values and try again.");
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : "Could not save your profile. Check the values and try again.");
     }
   });
 

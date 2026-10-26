@@ -13,21 +13,39 @@ export const Meal = z.object({
   consumedTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().optional(),
 });
 
-/** Inserts one logged meal (creating the day's log if needed) and returns its id. */
-export async function insertMealRow(supabase: SupabaseClient<any, "caldef", "caldef">, userId: string, raw: unknown) {
-  const m = Meal.parse(raw);
-  if (m.date && m.date > await getToday()) throw new Error("Can't log meals in the future");
-  const user = { id: userId };
-  const { data: log, error: e1 } = await supabase.from("daily_logs")
-    .upsert({ user_id: user.id, log_date: m.date ?? await getToday() }, { onConflict: "user_id,log_date" })
+type Db = SupabaseClient<any, "caldef", "caldef">;
+
+/** Returns the id of the user's log for `date`, creating it if needed. */
+export async function ensureDailyLog(supabase: Db, userId: string, date: string) {
+  if (date > await getToday()) throw new Error("Can't log meals in the future");
+  const { data: log, error } = await supabase.from("daily_logs")
+    .upsert({ user_id: userId, log_date: date }, { onConflict: "user_id,log_date" })
     .select("id").single();
-  if (e1) throw e1;
-  const { data: row, error } = await supabase.from("logged_meals").insert({
-    daily_log_id: log.id, user_id: user.id, slot: m.slot, title: m.title,
-    calories: Math.round(m.calories), protein_g: m.protein, fiber_g: m.fiber,
-    net_carbs_g: m.netCarbs, fat_g: m.fat, source: m.source ?? "manual",
-    consumed_time: m.consumedTime || null,
-  }).select("id").single();
+  if (error) throw error;
+  return log.id as string;
+}
+
+const mealRow = (m: z.infer<typeof Meal>, userId: string, dailyLogId: string) => ({
+  daily_log_id: dailyLogId, user_id: userId, slot: m.slot, title: m.title,
+  calories: Math.round(m.calories), protein_g: m.protein, fiber_g: m.fiber,
+  net_carbs_g: m.netCarbs, fat_g: m.fat, source: m.source ?? "manual",
+  consumed_time: m.consumedTime || null,
+});
+
+/** Inserts one logged meal (creating the day's log if needed) and returns its id. */
+export async function insertMealRow(supabase: Db, userId: string, raw: unknown) {
+  const m = Meal.parse(raw);
+  const logId = await ensureDailyLog(supabase, userId, m.date ?? await getToday());
+  const { data: row, error } = await supabase.from("logged_meals").insert(mealRow(m, userId, logId)).select("id").single();
   if (error) throw error;
   return row.id as string;
+}
+
+/** Inserts several meals for one day in a single statement, so they all land or none do. */
+export async function insertMealRows(supabase: Db, userId: string, date: string, raws: unknown[]) {
+  if (!raws.length) return;
+  const meals = raws.map((r) => Meal.parse(r));
+  const logId = await ensureDailyLog(supabase, userId, date);
+  const { error } = await supabase.from("logged_meals").insert(meals.map((m) => mealRow(m, userId, logId)));
+  if (error) throw error;
 }

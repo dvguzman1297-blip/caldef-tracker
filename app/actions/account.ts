@@ -1,9 +1,11 @@
 "use server";
+import { safe } from "@/lib/safe-action";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Permanently deletes the signed-in user. All their rows cascade from auth.users. */
-export async function deleteAccount(confirmation: string) {
+export async function deleteAccount(confirmation: string) { return safe(() => deleteAccountImpl(confirmation)); }
+async function deleteAccountImpl(confirmation: string) {
   if (confirmation !== "DELETE") throw new Error('Type DELETE to confirm.');
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

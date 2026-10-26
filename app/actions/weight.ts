@@ -2,6 +2,7 @@
 import { getToday } from "@/lib/today";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { safe } from "@/lib/safe-action";
 import { createClient } from "@/lib/supabase/server";
 import { isValidDate } from "@/lib/date";
 
@@ -17,7 +18,8 @@ async function user() {
   return { supabase, user };
 }
 
-export async function logWeight(raw: z.input<typeof Weight>) {
+export async function logWeight(raw: z.input<typeof Weight>) { return safe(() => logWeightImpl(raw)); }
+async function logWeightImpl(raw: z.input<typeof Weight>) {
   const w = Weight.parse(raw);
   if (w.date > await getToday()) throw new Error("Can't log a weight in the future");
   const { supabase, user: u } = await user();
@@ -28,7 +30,8 @@ export async function logWeight(raw: z.input<typeof Weight>) {
   revalidatePath("/"); revalidatePath("/history");
 }
 
-export async function deleteWeight(id: string) {
+export async function deleteWeight(id: string) { return safe(() => deleteWeightImpl(id)); }
+async function deleteWeightImpl(id: string) {
   const { supabase, user: u } = await user();
   const { error } = await supabase.from("weight_logs").delete().eq("id", id).eq("user_id", u.id);
   if (error) throw new Error(`Could not delete weight: ${error.message}`);
