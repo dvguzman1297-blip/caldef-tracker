@@ -17,7 +17,7 @@ export default async function RecipesPage() {
     fiber: t.fiber - totals.fiber, netCarbs: t.netCarbs - totals.netCarbs, fat: t.fat - totals.fat,
   };
   return (
-    <PageShell title="Pantry to plate"
+    <PageShell wide title="Pantry to plate"
       subtitle={`One-serving recipes sized for a single meal. Left today: ${Math.max(Math.round(remaining.calories), 0).toLocaleString("en-US")} kcal, ${Math.max(Math.round(remaining.protein), 0)}g protein.`}>
       <PantryClient remaining={remaining} today={today} />
     </PageShell>

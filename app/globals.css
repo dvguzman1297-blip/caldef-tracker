@@ -34,6 +34,7 @@
   --shadow-raised: 0 10px 30px -12px rgb(15 23 42 / .25);
   --shadow-overlay: 0 20px 50px -12px rgb(15 23 42 / .35);
   --ring: #059669;
+  --shadow-chip: 0 4px 12px -6px rgb(15 23 42 / .3);
 
   /* Macro identity colours: always paired with a text label, 3:1+ against surface and track */
   --m-protein: #7c3aed;
@@ -66,6 +67,7 @@
   --shadow-raised: 0 10px 30px -12px rgb(0 0 0 / .6);
   --shadow-overlay: 0 20px 50px -12px rgb(0 0 0 / .7);
   --ring: #34d399;
+  --shadow-chip: 0 4px 12px -6px rgb(0 0 0 / .6);
 
   --m-protein: #a78bfa;
   --m-carbs: #38bdf8;
@@ -93,6 +95,10 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-track: var(--track);
+
+  /* Page frame widths: `max-w-page` for the app frame (nav + wide pages), `max-w-page-narrow` for reading-width pages */
+  --container-page: 80rem;
+  --container-page-narrow: 64rem;
 }
 
 /* No rubber-banding or pull-to-refresh shifting the fixed bars */
@@ -167,5 +173,14 @@ dialog.sheet-bottom {
   background: var(--accent); color: var(--on-accent); font-weight: 600; transition: top .15s;
 }
 .skip-link:focus { top: .75rem; }
+
+/* A newly logged item eases in rather than popping; also what the optimistic row does while saving */
+@keyframes item-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.item-in { animation: item-in .18s ease-out; }
+
+/* Tappable chips (quick picks): lift slightly on hover, press in on tap */
+.chip { transition: transform .15s, border-color .15s, background-color .15s, box-shadow .15s; }
+.chip:hover { transform: translateY(-1px); box-shadow: var(--shadow-chip); }
+.chip:active { transform: scale(.98); box-shadow: none; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

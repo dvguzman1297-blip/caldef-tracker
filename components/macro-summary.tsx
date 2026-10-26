@@ -16,12 +16,15 @@ const COLOR = { protein: "var(--m-protein)", carbs: "var(--m-carbs)", fat: "var(
 
 type Props = { calories: { value: number; target: number }; macros: MacroStat[]; isEmpty: boolean };
 
-/** Hero calorie gauge (remaining is the headline number) with per-macro progress bars. */
+/**
+ * Hero calorie gauge (remaining is the headline number) with per-macro progress bars.
+ * Phones: gauge, then a two-column bar grid. md and up: gauge and stats on the left, bars stacked beside them.
+ */
 export function MacroSummary({ calories, macros, isEmpty }: Props) {
   return (
-    <section className="hero-card space-y-5 p-4 sm:p-6" aria-label="Daily nutrition summary">
+    <section className="hero-card grid gap-5 p-4 sm:p-6 md:grid-cols-[auto_minmax(0,1fr)] md:items-center md:gap-x-10" aria-label="Daily nutrition summary">
       <CalorieHero {...calories} isEmpty={isEmpty} />
-      <ul className="grid gap-x-8 gap-y-4 border-t border-line pt-5 sm:grid-cols-2">
+      <ul className="grid gap-x-8 gap-y-4 border-t border-line pt-5 sm:grid-cols-2 md:grid-cols-1 md:gap-y-5 md:border-t-0 md:pt-0">
         {macros.map((m) => <MacroBar key={m.id} {...m} />)}
       </ul>
     </section>
@@ -37,8 +40,8 @@ function CalorieHero({ value, target, isEmpty }: { value: number; target: number
   const stroke = over ? "var(--danger)" : "var(--accent)";
 
   return (
-    <div className="flex items-center gap-4 sm:gap-8">
-      <svg viewBox="0 0 128 128" className="size-36 shrink-0 sm:size-44" role="img"
+    <div className="flex items-center gap-4 sm:gap-8 md:flex-col md:gap-4">
+      <svg viewBox="0 0 128 128" className="size-36 shrink-0 sm:size-44 md:size-48" role="img"
         aria-label={`${n(Math.abs(left))} kilocalories ${over ? "over" : "left"} of ${n(target)}`}>
         <circle cx="64" cy="64" r={r} fill="none" strokeWidth="10" stroke="var(--track)" />
         <motion.circle cx="64" cy="64" r={r} fill="none" strokeWidth="10" strokeLinecap="round"
@@ -48,17 +51,17 @@ function CalorieHero({ value, target, isEmpty }: { value: number; target: number
         <text x="64" y="64" textAnchor="middle" fontSize="28" fontWeight="700" fill="var(--fg)">{n(Math.abs(left))}</text>
         <text x="64" y="82" textAnchor="middle" fontSize="12" fill="var(--fg-muted)">{over ? "kcal over" : "kcal left"}</text>
       </svg>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 md:w-full md:flex-none">
         <p className="sr-only" aria-live="polite" aria-atomic="true">
           {n(Math.abs(left))} kilocalories {over ? "over" : "remaining"}
         </p>
-        <dl className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+        <dl className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3 md:text-center">
           <Stat label="Eaten" value={n(value)} />
           <Stat label="Goal" value={n(target)} />
           <Stat label="Progress" value={`${Math.round(pct * 100)}%`} />
         </dl>
         {isEmpty && (
-          <button className="btn mt-4 w-full sm:w-auto" onClick={openLogMeal}>
+          <button className="btn mt-4 w-full sm:w-auto md:w-full" onClick={openLogMeal}>
             <Plus className="size-4" aria-hidden="true" />Log your first meal
           </button>
         )}

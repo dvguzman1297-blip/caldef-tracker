@@ -20,7 +20,7 @@ export default async function ProfilePage() {
     : undefined;
 
   return (
-    <PageShell title={m ? "Your profile" : "Welcome to CalDef"}
+    <PageShell wide title={m ? "Your profile" : "Welcome to CalDef"}
       subtitle={m ? "Your daily targets are calculated from these details." : "Step 1 of 3: tell us about you and we'll calculate your daily targets."}>
       {!m && <OnboardingSteps current={1} />}
       <ProfileForm today={today} isNew={!m}

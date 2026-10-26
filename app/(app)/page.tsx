@@ -50,19 +50,19 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const prev = w ? second : first;
 
   return (
-    <PageShell title="Dashboard" compactOnMobile subtitle="Track today's calories and macros against your targets.">
-      <DayHeader date={date} today={today} />
+    <PageShell wide title="Dashboard" compactOnMobile actions={<DayHeader date={date} today={today} />} subtitle="Track today's calories and macros against your targets.">
       {firstRun && <OnboardingCard targetKcal={m.target_calories} />}
 
       <DayView date={date} meals={day.meals} targets={targetsOf(m)} recent={recent} frequent={frequent} favorites={favorites}
-        previousDate={previousDate} previousMeals={previous.meals} />
-
-      <section className="glass p-4" aria-label="Weight">
+        previousDate={previousDate} previousMeals={previous.meals}
+        rail={
+          <section className="glass p-4" aria-label="Weight">
         <WeightForm date={date} today={today} label={dateLabel(date, today)}
           current={w ? { id: w.id, kg: Number(w.weight_kg) } : undefined}
           previous={prev ? { kg: Number(prev.weight_kg), date: prev.log_date } : undefined} />
         <p className="mt-3 text-xs text-muted">Your trend is on the <Link href="/history" className="font-medium text-accent-fg underline">History</Link> page.</p>
       </section>
+        } />
     </PageShell>
   );
 }

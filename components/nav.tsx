@@ -84,8 +84,10 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
   return (
     <>
       {/* Desktop header (md and up): solid, blurred backdrop so scrolling content never shows through */}
-      <div className="sticky top-0 z-10 hidden bg-app/90 px-4 py-3 backdrop-blur md:block">
-        <header className="glass mx-auto flex max-w-5xl items-center gap-4 px-4 py-2.5 shadow-sm">
+      <div className="sticky top-0 z-10 hidden bg-app/90 py-3 backdrop-blur md:block">
+        {/* Same frame as <main> (max-w-page + gutters), so the bar and the page content share edges */}
+        <div className="mx-auto max-w-page px-4 sm:px-6 lg:px-8">
+        <header className="glass flex items-center gap-4 px-4 py-2.5 shadow-sm">
           <Link href="/" className="flex shrink-0 items-center" aria-label="CalDef home">
             <Wordmark className="h-9 w-auto text-fg" />
           </Link>
@@ -107,13 +109,14 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
             </AccountMenu>
           </div>
         </header>
+        </div>
       </div>
 
       {/* Mobile top header: fixed to the viewport (like the bottom bar) so overscroll and the browser toolbar never move it.
           The spacer reserves the same height in the page flow. */}
       <div aria-hidden="true" className="h-[calc(4.25rem+env(safe-area-inset-top))] md:hidden" />
       <div className="fixed inset-x-0 top-0 z-10 flex h-[calc(4.25rem+env(safe-area-inset-top))] items-end bg-app px-3 pb-2 md:hidden">
-        <header className="glass mx-auto flex w-full max-w-5xl items-center gap-2 px-3 py-1 shadow-sm">
+        <header className="glass mx-auto flex w-full max-w-page items-center gap-2 px-3 py-1 shadow-sm">
           <Link href="/" className="flex min-w-0 items-center gap-2" aria-label="CalDef home">
             <Wordmark className="h-8 w-auto shrink-0 text-fg" />
           </Link>

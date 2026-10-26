@@ -4,11 +4,11 @@ import { addDays, dateLabel } from "@/lib/date";
 
 const step = "btn btn-ghost !h-11 !w-11 !p-0";
 
-/** Context banner: date navigation. */
+/** Date navigation; sits in the page title row (PageShell `actions`) rather than in a card of its own. */
 export function DayHeader({ date, today }: { date: string; today: string }) {
   const isToday = date === today;
   return (
-    <header className="glass flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-3">
+    <header className="flex flex-wrap items-center gap-x-4 gap-y-2">
       <div className="flex items-center gap-1">
         <Link href={`/?date=${addDays(date, -1)}`} className={step} aria-label="Previous day">
           <ChevronLeft className="size-5" aria-hidden="true" />

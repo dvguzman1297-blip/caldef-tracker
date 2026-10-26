@@ -38,7 +38,7 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   for (const e of week) if (!e.logged_meal_id) for (const i of e.ingredients as string[]) shopping.set(i.trim().toLowerCase(), i.trim());
 
   return (
-    <PageShell title="Meal Planning" subtitle="Plan meals ahead and build a shopping list.">
+    <PageShell wide title="Meal Planning" subtitle="Plan meals ahead and build a shopping list.">
       <div className="flex items-center gap-1">
         <Link href={`/lanes?date=${addDays(date, -1)}`} className={chevron} aria-label="Previous day"><ChevronLeft className="size-5" aria-hidden="true" /></Link>
         <h2 className="min-w-44 text-center text-lg font-bold" aria-live="polite">{dateLabel(date, today)}</h2>
